@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Перекладина</title>
+<style>
+:root{--bg:#f2f2f7;--card:#fff;--tx:#1c1c1e;--mut:#6e6e73;--line:rgba(60,60,67,.18);--acc:#0a84ff;--ok:#30d158;--bad:#ff453a;--rest:rgba(142,142,147,.14);box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--card:#1c1c1e;--tx:#f5f5f7;--mut:#98989f;--line:rgba(235,235,245,.16);--acc:#64a8ff;--rest:rgba(142,142,147,.2)}}
+:root[data-theme="dark"]{--bg:#000;--card:#1c1c1e;--tx:#f5f5f7;--mut:#98989f;--line:rgba(235,235,245,.16);--acc:#64a8ff;--rest:rgba(142,142,147,.2)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:var(--bg);color:var(--tx);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif}
+button,input{font:inherit;color:inherit}
+.auth{max-width:420px;margin:0 auto;padding:40px 16px;text-align:center}
+.logo{width:64px;height:64px;margin:0 auto;display:grid;place-items:center;font-size:32px;border-radius:20px;background:linear-gradient(135deg,#0a84ff,#30d158)}
+h1{margin:10px 0 4px;font-size:28px;letter-spacing:-.02em}.sub{margin:0 0 18px;color:var(--mut)}
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:22px;text-align:left}
+.f{display:block;margin-bottom:14px}.f span{display:block;font-size:13px;font-weight:600;color:var(--mut);margin-bottom:6px}
+.f input{width:100%;padding:12px 14px;font-size:16px;border-radius:14px;border:1px solid var(--line);background:var(--rest);outline:none}
+.f input:focus{border-color:var(--acc);box-shadow:0 0 0 3px color-mix(in srgb,var(--acc) 25%,transparent)}
+.cb{display:flex;gap:8px;align-items:flex-start;margin:0 0 10px;font-size:14px}.cb input{margin-top:3px}
+details{margin:0 0 12px;font-size:14px;color:var(--mut)}summary{cursor:pointer}details .f{margin:10px 0 0}
+.btn{display:block;width:100%;border:0;border-radius:14px;padding:13px 18px;font-weight:600;background:var(--acc);color:#fff;cursor:pointer;margin-top:6px}
+.btn:disabled{opacity:.6}
+.row{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-top:14px}
+.lk{border:0;background:transparent;color:var(--acc);font-weight:600;cursor:pointer;padding:4px 0}
+.msg{min-height:20px;margin-top:10px;font-size:14px;color:var(--bad)}.msg.ok{color:var(--ok)}
+</style>
+</head>
+<body>
+<main class="auth"><div class="logo">🏋️</div><h1>Перекладина</h1><p class="sub" id="s"></p><div class="card" id="c"></div></main>
+<script>
+(function(){
+"use strict";
+var L=/^ru/i.test(navigator.language||"")?"ru":"en";
+var T={
+ru:{sub:"Трекер калистеники: турник, свой вес, эспандеры",email:"Email",pw:"Пароль",name:"Имя",pwn:"Пароль (от 8 символов, буквы и цифры)",pwn2:"Новый пароль (от 8 символов, буквы и цифры)",adult:"Мне есть 18 лет",consent:"Согласен(на) на хранение имени и email для работы аккаунта",code:"У меня есть код администратора",codeP:"Код администратора",login:"Войти",reg:"Создать аккаунт",forgot:"Забыли пароль?",toReg:"Регистрация",toLogin:"Уже есть аккаунт? Войти",send:"Отправить ссылку",reset:"Сменить пароль",tL:"Вход",tR:"Регистрация",tF:"Восстановление пароля",tS:"Новый пароль",sent:"Если такой аккаунт есть, мы отправили письмо со ссылкой.",done:"Пароль изменён. Теперь войдите.",
+eInv:"Проверьте поля: имя от 2 символов, корректный email, пароль от 8 символов с буквами и цифрами, обе галочки.",eTaken:"Этот email уже зарегистрирован.",eCred:"Неверный email или пароль.",eBlk:"Аккаунт заблокирован администратором.",eMany:"Слишком много попыток. Попробуйте позже.",eCode:"Неверный код администратора.",eGen:"Что-то пошло не так. Попробуйте ещё раз.",eRes:"Ссылка недействительна или устарела. Запросите новую."},
+en:{sub:"Calisthenics tracker: pull-up bar, bodyweight, bands",email:"Email",pw:"Password",name:"Name",pwn:"Password (8+ characters, letters and digits)",pwn2:"New password (8+ characters, letters and digits)",adult:"I am 18 or older",consent:"I agree to the storage of my name and email for my account",code:"I have an admin code",codeP:"Admin code",login:"Log in",reg:"Create account",forgot:"Forgot password?",toReg:"Sign up",toLogin:"Already have an account? Log in",send:"Send link",reset:"Change password",tL:"Log in",tR:"Sign up",tF:"Password recovery",tS:"New password",sent:"If that account exists, we have sent an email with a link.",done:"Password changed. Please log in.",
+eInv:"Check the fields: name 2+ characters, valid email, password 8+ characters with letters and digits, both checkboxes.",eTaken:"This email is already registered.",eCred:"Wrong email or password.",eBlk:"This account was blocked by an administrator.",eMany:"Too many attempts. Try again later.",eCode:"Wrong admin code.",eGen:"Something went wrong. Please try again.",eRes:"The link is invalid or expired. Request a new one."}
+};
+function t(k){return T[L][k]}
+var view="login",note="",tok="";
+var m=/^#reset=([a-f0-9]{64})$/.exec(location.hash);if(m){view="reset";tok=m[1]}
+function $(s){return document.querySelector(s)}
+function fld(id,l,type,ac){return '<label class="f"><span>'+l+'</span><input id="'+id+'" type="'+type+'" autocomplete="'+ac+'"></label>'}
+function lk(l,v){return '<button class="lk" data-v="'+v+'">'+l+'</button>'}
+function render(){
+  var h="";
+  $("#s").textContent=t("sub");
+  if(view==="register")h=fld("nm",t("name"),"text","name")+fld("em",t("email"),"email","email")+fld("pw",t("pwn"),"password","new-password")+'<label class="cb"><input id="ad" type="checkbox"><span>'+t("adult")+'</span></label><label class="cb"><input id="cs" type="checkbox"><span>'+t("consent")+'</span></label><details><summary>'+t("code")+'</summary>'+fld("ac",t("codeP"),"password","off")+'</details><button class="btn" data-a="register">'+t("reg")+'</button><div class="row">'+lk(t("toLogin"),"login")+"</div>";
+  else if(view==="forgot")h=fld("em",t("email"),"email","email")+'<button class="btn" data-a="forgot">'+t("send")+'</button><div class="row">'+lk(t("toLogin"),"login")+"</div>";
+  else if(view==="reset")h=fld("pw",t("pwn2"),"password","new-password")+'<button class="btn" data-a="reset">'+t("reset")+"</button>";
+  else h=fld("em",t("email"),"email","username")+fld("pw",t("pw"),"password","current-password")+'<button class="btn" data-a="login">'+t("login")+'</button><div class="row">'+lk(t("forgot"),"forgot")+lk(t("toReg"),"register")+"</div>";
+  $("#c").innerHTML=h+'<div class="msg'+(note.ok?" ok":"")+'" id="msg" role="alert">'+(note.t||"")+"</div>";
+  note={};
+}
+function msg(x,ok){var e=$("#msg");if(e){e.textContent=x;e.className="msg"+(ok?" ok":"")}}
+function post(path,body){
+  return fetch(path,{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})
+    .then(function(r){return r.json().catch(function(){return {}}).then(function(j){return {ok:r.ok,j:j}})});
+}
+var ERR={invalid:"eInv",email_taken:"eTaken",bad_credentials:"eCred",blocked:"eBlk",too_many:"eMany",bad_code:"eCode"};
+function fail(r,def){msg(t(ERR[r.j.error]||def||"eGen"))}
+function v(id){var e=$("#"+id);return e?e.value:""}
+function run(a){
+  var b=$(".btn");b.disabled=true;
+  var done=function(){b.disabled=false};
+  if(a==="login")post("/api/login",{email:v("em"),password:v("pw")}).then(function(r){r.ok?location.replace("/"):(fail(r),done())}).catch(function(){msg(t("eGen"));done()});
+  else if(a==="register")post("/api/register",{name:v("nm"),email:v("em"),password:v("pw"),adult:$("#ad").checked,consent:$("#cs").checked,adminCode:v("ac")||undefined}).then(function(r){r.ok?location.replace("/"):(fail(r),done())}).catch(function(){msg(t("eGen"));done()});
+  else if(a==="forgot")post("/api/forgot",{email:v("em")}).then(function(r){r.ok?msg(t("sent"),true):fail(r);done()}).catch(function(){msg(t("eGen"));done()});
+  else if(a==="reset")post("/api/reset",{token:tok,password:v("pw")}).then(function(r){
+    if(r.ok){history.replaceState(null,"",location.pathname);view="login";note={t:t("done"),ok:1};render()}else{fail(r,"eRes");done()}
+  }).catch(function(){msg(t("eGen"));done()});
+}
+document.addEventListener("click",function(e){
+  var b=e.target.closest("[data-v],[data-a]");if(!b)return;
+  if(b.dataset.v){view=b.dataset.v;render()}else run(b.dataset.a);
+});
+document.addEventListener("keydown",function(e){
+  if(e.key==="Enter"&&e.target.tagName==="INPUT"&&e.target.type!=="checkbox"){var b=$(".btn");if(b&&!b.disabled)b.click()}
+});
+render();
+})();
+</script>
+</body>
+</html>
