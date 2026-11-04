@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Перекладина — трекер калистеники</title>
+<style>
+:root{--bg:#f2f2f7;--card:rgba(255,255,255,.72);--sheet:rgba(255,255,255,.92);--tx:#1c1c1e;--mut:#6e6e73;--line:rgba(60,60,67,.16);--acc:#0a84ff;--ok:#30d158;--rest:rgba(142,142,147,.16);--band:#ff9f0a;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#000;--card:rgba(44,44,46,.62);--sheet:rgba(28,28,30,.94);--tx:#f5f5f7;--mut:#98989f;--line:rgba(235,235,245,.16);--acc:#64a8ff;--rest:rgba(142,142,147,.2)}}
+:root[data-theme="dark"]{--bg:#000;--card:rgba(44,44,46,.62);--sheet:rgba(28,28,30,.94);--tx:#f5f5f7;--mut:#98989f;--line:rgba(235,235,245,.16);--acc:#64a8ff;--rest:rgba(142,142,147,.2)}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--tx);font:16px/1.4 -apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;background:radial-gradient(60% 40% at 8% 0,rgba(10,132,255,.2),transparent),radial-gradient(50% 40% at 100% 8%,rgba(48,209,88,.15),transparent),var(--bg);background-attachment:fixed;-webkit-font-smoothing:antialiased}
+button{font:inherit;color:inherit}
+.wrap{max-width:1000px;margin:0 auto;padding:16px}
+.glass{background:var(--card);-webkit-backdrop-filter:blur(24px) saturate(180%);backdrop-filter:blur(24px) saturate(180%);border:1px solid var(--line);border-radius:24px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;margin:8px 0 16px}
+.brand{display:flex;align-items:center;gap:14px}
+.av{width:56px;height:56px;border-radius:18px;flex:none;box-shadow:0 8px 20px rgba(10,132,255,.35)}
+h1{font-size:28px;letter-spacing:-.03em;font-weight:800;margin:0;line-height:1.1}
+.sub{margin:2px 0 0;color:var(--mut);font-size:14px}
+.nav{display:flex;align-items:center;gap:4px;padding:4px}
+.nav button{border:0;background:transparent;border-radius:18px;min-width:40px;height:40px;font-size:22px;cursor:pointer}
+.nav button.t{font-size:14px;font-weight:600;color:var(--acc);padding:0 12px}
+.nav button:hover{background:var(--rest)}
+#mon{min-width:132px;text-align:center;font-weight:600}
+.prog{padding:16px 20px;margin-bottom:16px}
+.pt{display:flex;align-items:baseline;gap:12px;margin-bottom:10px}
+.pt b{font-size:30px;letter-spacing:-.02em}
+.pt span{color:var(--mut);font-size:14px}
+.bar{height:10px;border-radius:99px;background:var(--rest);overflow:hidden}
+.bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,var(--acc),var(--ok));transition:width .5s ease}
+.grid{display:grid;gap:16px}
+@media (min-width:860px){.grid{grid-template-columns:380px 1fr;align-items:start}}
+.cal{padding:16px}
+.g{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.wd{font-size:11px;font-weight:600;color:var(--mut);text-align:center;padding:4px 0}
+.d{position:relative;aspect-ratio:1/1.25;min-width:0;padding:4px 1px;border:0;border-radius:14px;background:transparent;font-size:15px;font-weight:600;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;line-height:1}
+.d .lb{max-width:100%;font-size:8px;font-weight:600;line-height:1.15;opacity:.85;overflow:hidden}
+.d small{position:absolute;top:3px;right:4px;font-size:8px;font-weight:700;opacity:.9}
+@media (min-width:420px){.d .lb{font-size:9px}.d small{font-size:9px}}
+.d.work{background:color-mix(in srgb,var(--acc) 16%,transparent)}
+.d.rest{background:var(--rest);color:var(--mut)}
+.d.done{background:var(--ok);color:#fff}
+.d.today{box-shadow:0 0 0 2px var(--acc)}
+.d.sel{outline:2px solid var(--tx);outline-offset:2px}
+.lg{display:flex;gap:14px;flex-wrap:wrap;margin-top:14px;font-size:12px;color:var(--mut)}
+.lg i{display:inline-block;width:10px;height:10px;border-radius:4px;margin-right:5px}
+.lg .a{background:color-mix(in srgb,var(--acc) 45%,transparent)}.lg .r{background:var(--rest)}.lg .o{background:var(--ok)}
+.pnl{padding:20px}
+.pnl h2{margin:0;font-size:22px;letter-spacing:-.01em}
+.badge{display:inline-block;margin:8px 0 4px;padding:4px 12px;border-radius:99px;font-size:13px;font-weight:600;background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
+.badge.ok{background:color-mix(in srgb,var(--ok) 22%,transparent);color:var(--ok)}
+.note{color:var(--mut);font-size:13px;margin:4px 0 8px}
+.ex{display:flex;align-items:center;gap:12px;padding:12px 0;border-top:1px solid var(--line)}
+.ck{width:28px;height:28px;border-radius:50%;border:2px solid var(--mut);background:transparent;flex:none;cursor:pointer;display:grid;place-items:center;color:#fff;padding:0}
+.ck[aria-checked="true"]{background:var(--ok);border-color:var(--ok)}
+.ck[aria-checked="true"]::after{content:"✓";font-size:16px;font-weight:700}
+.inf{flex:1;min-width:0;cursor:pointer}
+.nm{font-weight:600}
+.ex.on .nm{text-decoration:line-through;opacity:.55}
+.ds{color:var(--mut);font-size:13px;margin-top:2px}
+.how{border:0;border-radius:99px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;background:color-mix(in srgb,var(--acc) 14%,transparent);color:var(--acc)}
+.btn{display:block;width:100%;margin-top:14px;border:0;border-radius:16px;padding:14px 18px;font-size:16px;font-weight:600;cursor:pointer;background:var(--acc);color:#fff}
+.btn.ok{background:var(--ok)}
+.btn.sec{background:var(--rest);color:var(--tx)}
+.rs ul{margin:10px 0 0;padding-left:20px;color:var(--mut)}
+.md{position:fixed;inset:0;z-index:20;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.42)}
+.md[hidden]{display:none}
+.sheet{position:relative;width:100%;max-width:560px;max-height:92vh;overflow:auto;border-radius:26px 26px 0 0;padding:22px 20px calc(22px + env(safe-area-inset-bottom,0px));background:var(--sheet)}
+@media (min-width:600px){.md{align-items:center}.sheet{border-radius:26px}}
+.x{position:absolute;top:14px;right:14px;width:34px;height:34px;border:0;border-radius:50%;background:var(--rest);cursor:pointer;font-size:15px}
+.sheet h2{margin:0 44px 4px 0;font-size:22px}
+.sheet h3{margin:18px 0 6px;font-size:15px}
+.sheet ol,.sheet ul{margin:0;padding-left:20px}
+.sheet li{margin:6px 0}
+.viz{margin:12px 0;padding:8px;border-radius:18px;background:color-mix(in srgb,var(--acc) 9%,transparent)}
+.viz svg{display:block;width:100%;height:auto;max-height:230px}
+.plan{padding:14px 16px;margin-bottom:16px}.pl{display:flex;flex-wrap:wrap;align-items:center;gap:8px}.plt{font-weight:600;margin-right:4px}.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1px solid var(--line);background:transparent;border-radius:99px;padding:8px 14px;font-size:14px;font-weight:600;cursor:pointer;color:var(--mut)}
+.chip.on{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc);border-color:transparent}
+.rt{margin-left:auto;display:flex;gap:8px;flex-wrap:wrap}.chip.base2.on{background:var(--acc);color:#fff}
+.chip.ai{color:#bf5af2}.chip.ai.on{background:linear-gradient(135deg,#bf5af2,#0a84ff);color:#fff;border-color:transparent}
+.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden}
+.aiup{display:flex;align-items:center;gap:12px;margin:10px 0}.aiup img{width:72px;height:72px;object-fit:cover;border-radius:14px}
+.aipv{display:flex;gap:8px;flex-wrap:wrap}.aipv img{width:72px;height:72px;object-fit:cover;border-radius:14px}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:8px 0}.tgrid label{font-size:13px;color:var(--mut);display:flex;flex-direction:column;gap:4px}.tgrid input{font:inherit;font-size:16px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--rest);color:var(--tx);width:100%}
+.fm{display:flex;flex-direction:column;gap:10px;margin:12px 0}.fm label{font-size:13px;color:var(--mut);display:flex;flex-direction:column;gap:4px}
+.fm input[type=text],.fm input[type=email]{font:inherit;font-size:16px;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--rest);color:var(--tx);width:100%}
+.fm .cb{flex-direction:row;align-items:flex-start;gap:8px;color:var(--tx)}.fm .cb input{margin-top:3px}
+.tw2{overflow-x:auto}.ut{width:100%;border-collapse:collapse;font-size:14px}.ut td{padding:8px 4px;border-top:1px solid var(--line);vertical-align:middle}.ut small{display:block;color:var(--mut);font-size:13px}
+.gate{position:fixed;inset:0;z-index:40;display:flex;align-items:center;justify-content:center;padding:16px;background:var(--bg);overflow:auto}.gate[hidden]{display:none}.gc{width:100%;max-width:420px;padding:24px}.gc h2{margin:0 0 6px}
+.rsel{font:inherit;font-size:13px;padding:4px 6px;border-radius:8px;border:1px solid var(--line);background:var(--rest);color:var(--tx)}
+.hi{display:flex;align-items:center;gap:10px;padding:10px 0;border-top:1px solid var(--line)}.hth{width:48px;height:48px;border-radius:12px;background:var(--rest);overflow:hidden;flex:none}.hth img{width:100%;height:100%;object-fit:cover;display:block}
+.hin{flex:1;min-width:0;display:flex;flex-direction:column}.hin span{color:var(--mut);font-size:13px}.x2{border:0;background:transparent;cursor:pointer;font-size:16px;padding:6px}.rsn{margin:0 0 8px;color:var(--mut);font-size:13px}
+.aipick{position:relative;display:inline-block;width:auto;margin:0;cursor:pointer}
+.aiscore{display:flex;align-items:center;gap:12px;margin:16px 0 4px}.aiscore b{font-size:48px;letter-spacing:-.03em;line-height:1;background:linear-gradient(135deg,#bf5af2,#0a84ff);-webkit-background-clip:text;background-clip:text;color:transparent}.aiscore span{color:var(--mut);font-size:14px}
+.mrow{display:flex;align-items:center;gap:10px;margin:6px 0;font-size:14px}.mrow span{width:96px}.mbar{flex:1;height:8px;border-radius:99px;background:var(--rest);overflow:hidden}.mbar i{display:block;height:100%;background:linear-gradient(90deg,var(--acc),var(--ok))}.mrow em{font-style:normal;color:var(--mut);width:34px;text-align:right}
+.seg{display:flex;gap:8px;flex-wrap:wrap}
+body.lock{overflow:hidden}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand"><svg class="av" viewBox="0 0 64 64" role="img" aria-label="Логотип"><defs><linearGradient id="lg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0a84ff"/><stop offset="1" stop-color="#30d158"/></linearGradient></defs><rect width="64" height="64" rx="18" fill="url(#lg)"/><g fill="none" stroke="#fff" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17H52"/><path d="M22 17L27 32H37L42 17"/><path d="M32 32V46M26 57L32 46L38 57"/></g><circle cx="32" cy="24.5" r="4.5" fill="#fff"/></svg><div><h1 id="bn"></h1><p class="sub" id="bs"></p></div></div>
+    <div class="nav glass">
+      <button id="bp" data-a="prev">‹</button>
+      <div id="mon" aria-live="polite"></div>
+      <button id="bx" data-a="next">›</button>
+      <button class="t" id="bt" data-a="today"></button><button id="ac" data-a="acc">👤</button><button id="gs" data-a="set">⚙</button>
+    </div>
+  </header>
+  <section class="glass prog" id="prog" aria-label="Прогресс за месяц"></section>
+  <section class="glass plan" id="plan"></section>
+  <main class="grid">
+    <section class="glass cal" id="cal" aria-label="Календарь"></section>
+    <section id="day"></section>
+  </main>
+</div>
+<div class="md" id="md" data-a="bd" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="mt">
+    <button class="x" data-a="close" aria-label="Закрыть">✕</button>
+    <h2 id="mt"></h2><div class="note" id="ms"></div><div id="mb"></div>
+  </div>
+</div>
+<script>
+(function(){
+"use strict";
+var KEY="calisthenics-tracker-v1",S={};
+try{S=JSON.parse(localStorage.getItem(KEY))||{};if(typeof S!=="object")S={}}catch(e){S={}}
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}pushState()}
+
+
+/* ---------- Анимированные SVG-схемы ---------- */
+var G='<path d="M10 105H190" stroke="var(--line)" stroke-width="3" stroke-linecap="round"/>';
+var BAR='<path d="M56 14H144" stroke="var(--mut)" stroke-width="4" stroke-linecap="round"/>';
+function an(at,a,b){return '<animate attributeName="'+at+'" values="'+a+';'+b+';'+a+'" dur="2.6s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"/>'}
+function fig(lines,h0,h1,extra){
+  var s='<svg viewBox="0 0 200 120" role="img" aria-label="Анимация техники выполнения">'+(extra||'');
+  lines.forEach(function(l){
+    s+='<polyline points="'+l[0]+'" fill="none" stroke="'+(l[2]?'var(--band)':'var(--acc)')+'" stroke-width="'+(l[2]?3:5)+'" stroke-linecap="round" stroke-linejoin="round">'+(l[1]?an("points",l[0],l[1]):"")+'</polyline>';
+  });
+  if(h0){var a=h0.split(","),b=h1.split(",");s+='<circle r="8" cx="'+a[0]+'" cy="'+a[1]+'" fill="var(--acc)">'+an("cx",a[0],b[0])+an("cy",a[1],b[1])+'</circle>'}
+  return s+'</svg>';
+}
+var SC={
+ pushup:function(){return fig([["28,101 138,58","28,101 145,90"],["138,58 139,80 140,102","145,90 128,94 140,102"]],"150,50","157,82",G)},
+ pull:function(){return fig([["78,14 90,50 110,50 122,14","78,14 86,26 114,26 122,14"],["100,50 100,92","100,26 100,66"],["92,112 100,92 108,112","92,86 100,66 108,86"]],"100,38","100,12",BAR)},
+ hang:function(){return fig([["78,14 90,50 110,50 122,14","78,14 90,44 110,44 122,14"],["100,50 100,92","100,44 100,86"],["92,112 100,92 108,112","92,106 100,86 108,106"]],"100,38","100,32",BAR)},
+ row:function(){return fig([["18,58 70,58","18,58 96,58",1],["110,44 90,52 70,58","110,44 124,56 96,58"],["110,44 110,84"],["102,104 110,84 118,104"]],"112,32","112,32",G)},
+ curl:function(){return fig([["100,104 106,84","100,104 126,52",1],["100,42 104,64 106,84","100,42 104,64 126,52"],["100,40 100,84"],["92,104 100,84 108,104"]],"100,29","100,29",G)},
+ ext:function(){return fig([["116,8 118,46","116,8 106,84",1],["100,42 104,62 118,46","100,42 104,62 106,84"],["100,40 100,84"],["92,104 100,84 108,104"]],"100,29","100,29",G)},
+ press:function(){return fig([["28,46 112,46","28,46 138,46",1],["100,44 90,54 112,46","100,44 114,45 138,46"],["100,40 100,84"],["92,104 100,84 108,104"]],"100,29","100,29",G)},
+ calf:function(){return fig([["96,98 98,64 100,34","98,88 99,54 100,24"],["88,100 110,102","92,88 110,102"]],"100,20","100,10",G)},
+ wrist:function(){return fig([["20,76 100,76"],["30,62 100,60"],["100,60 126,74","100,60 126,46"],["112,104 126,74","112,104 126,46",1]])}
+};
+
+/* ---------- Упражнения ---------- */
+var EX=[
+{id:"push",n:"Отжимания классические",m:"Грудь",r:"4 × 10–15",s:"pushup",
+ st:["Упор лёжа: ладони чуть шире плеч, тело — прямая линия от пяток до макушки.","Медленно (2–3 с) опуститесь, пока грудь не окажется в 3–5 см от пола; локти под углом около 45° к корпусу.","Мощно выжмите себя вверх до полного выпрямления рук, не отрывая таз."],
+ tp:["Не прогибайтесь в пояснице: напрягите пресс и ягодицы.","Если беспокоят запястья — упритесь в кулаки или разомните их перед началом."]},
+{id:"bpress",n:"Жим эспандера от груди",m:"Грудь",r:"3 × 12–15",s:"press",
+ st:["Заведите петлю за спину под лопатки, концы возьмите в руки на уровне груди.","На выдохе выжмите руки вперёд до выпрямления.","Медленно (3 с) вернитесь, сопротивляясь резине."],
+ tp:["Резина не должна давить на шею и подниматься к ней.","Перед каждой тренировкой осматривайте петлю: трещины и потёртости — повод заменить её."]},
+{id:"inc",n:"Отжимания с упором ног на возвышении",m:"Грудь (верх)",r:"3 × 8–12",s:"pushup",
+ st:["Поставьте стопы на устойчивый стул или диван, руки на полу чуть шире плеч.","Опускайтесь, пока грудь не окажется у пола, корпус — прямой.","Выжмите вверх, удерживая лопатки сведёнными."],
+ tp:["Начните с высоты 30–40 см: чем выше ноги, тем больше нагрузка на плечи.","Шею держите нейтрально, не задирайте голову."]},
+{id:"diamond",n:"Алмазные отжимания",m:"Трицепс",r:"3 × 8–12",s:"pushup",
+ st:["Сложите ладони под грудью: большие и указательные пальцы образуют «ромб».","Опускайтесь, прижимая локти к рёбрам.","Выжмите вверх до полного разгибания локтей."],
+ tp:["Тяжело — выполняйте с колен, сохраняя прямую линию корпуса.","При дискомфорте в локтях разведите руки чуть шире."]},
+{id:"wide",n:"Широкие отжимания",m:"Грудь",r:"3 × 10–15",s:"pushup",
+ st:["Упор лёжа, ладони заметно шире плеч, пальцы смотрят вперёд или чуть наружу.","Опускайтесь, пока грудь не окажется у пола, корпус — прямая линия.","Выжмите вверх, мысленно сводя грудные мышцы."],
+ tp:["Не разводите локти строго в стороны: держите их под углом 60–70°, это бережёт плечи.","При дискомфорте в плечевом суставе сузьте постановку рук."]},
+{id:"btri",n:"Разгибания рук с эспандером вниз",m:"Трицепс",r:"3 × 12–15",s:"ext",
+ st:["Закрепите эспандер на перекладине турника выше головы.","Локти прижаты к корпусу, возьмитесь за петлю.","Разогните руки вниз до конца, задержитесь на 1 с и медленно вернитесь."],
+ tp:["Работает только предплечье — локти не уходят вперёд.","Закрепляйте резину надёжно: срыв может ударить по лицу."]},
+{id:"pullup",n:"Подтягивания широким хватом",m:"Спина",r:"4 × 6–10",s:"pull",
+ st:["Хват сверху шире плеч, вис на прямых руках, лопатки слегка опущены.","Тяните локти вниз к рёбрам, пока подбородок не окажется над перекладиной.","Опускайтесь 2–3 секунды до полного виса."],
+ tp:["Не раскачивайтесь и не помогайте ногами.","Не хватает силы — делайте медленные спуски (негативы) с опоры."]},
+{id:"chinup",n:"Подтягивания обратным хватом",m:"Бицепс · Спина",r:"3 × 6–10",s:"pull",
+ st:["Хват снизу на ширине плеч, вис на прямых руках.","Подтянитесь, ведя грудь к перекладине и сжимая бицепс.","Контролируемо опуститесь до виса."],
+ tp:["Не бросайте тело вниз: резкое разгибание нагружает локти.","Смотрите прямо, шею не сгибайте."]},
+{id:"brow",n:"Тяга эспандера к поясу",m:"Спина",r:"3 × 12–15",s:"row",
+ st:["Закрепите резину на уровне груди и отойдите так, чтобы она натянулась.","Сведите лопатки и потяните руки к поясу, локти вдоль корпуса.","Задержитесь на 1 с и медленно вернитесь."],
+ tp:["Спина прямая, не откидывайтесь назад.","Не поднимайте плечи к ушам."]},
+{id:"bcurl",n:"Сгибания рук на бицепс с эспандером",m:"Бицепс",r:"3 × 12–15",s:"curl",
+ st:["Встаньте на середину петли, возьмите концы хватом снизу.","Согните руки, не отрывая локти от корпуса, до полного сокращения.","За 3 секунды опустите руки."],
+ tp:["Не помогайте корпусом: раскачка снижает нагрузку на мышцу.","Не фиксируйте локти жёстко в нижней точке."]},
+{id:"hammer",n:"Молотковые сгибания с эспандером",m:"Бицепс · Предплечья",r:"3 × 12–15",s:"curl",
+ st:["Встаньте на середину петли, возьмите концы нейтральным хватом (ладони смотрят друг на друга).","Согните руки, не отрывая локти от корпуса.","Задержитесь на 1 с и медленно опустите."],
+ tp:["Запястья держите прямыми, без прогиба.","Не уводите локти вперёд: нагрузка уйдёт с мышц."]},
+{id:"hang",n:"Вис на турнике",m:"Предплечья · Хват",r:"3 × {max} (20–60 {s})",s:"hang",
+ st:["Возьмитесь за перекладину хватом сверху чуть шире плеч.","Повисните на прямых руках, плечи слегка опущены от ушей.","Держите до жжения в предплечьях, затем спокойно спуститесь на пол."],
+ tp:["Увеличивайте время на 3–5 секунд каждую неделю.","Если кожа на ладонях стирается — используйте магнезию или перчатки."]},
+{id:"calf",n:"Подъёмы на носки двумя ногами",m:"Икры",r:"4 × 20",s:"calf",
+ st:["Встаньте носками на край ступеньки, пятки свисают, держитесь за опору.","Поднимитесь на носки как можно выше и задержитесь на 1 с.","Медленно (3 с) опустите пятки ниже уровня ступеньки."],
+ tp:["Колени прямые, но не «запертые».","Не пружиньте: работает контролируемая амплитуда."]},
+{id:"calf1",n:"Подъёмы на носок одной ногой",m:"Икры",r:"3 × 12–15 {leg}",s:"calf",
+ st:["Встаньте на одну ногу на ступеньке, вторую согните, рука на опоре.","Поднимитесь на носок, задержитесь и медленно опуститесь до растяжения.","Закончив подход, смените ногу."],
+ tp:["Опора рукой — только для равновесия.","Следите, чтобы колено не заваливалось внутрь."]},
+{id:"bcalf",n:"Подъёмы на носки сидя с эспандером",m:"Икры",r:"3 × 15–20",s:"calf",
+ st:["Сядьте на стул, пропустите резину под передним отделом стопы, концы удерживайте руками у колена.","Поднимите пятку, преодолевая сопротивление резины.","Задержитесь на 1 с и плавно опустите."],
+ tp:["Подбирайте натяжение так, чтобы последние повторы были тяжёлыми.","Ставьте стопу на нескользкую поверхность, чтобы резина не слетела."]},
+{id:"wrist",n:"Сгибания запястий с эспандером",m:"Предплечья",r:"3 × 15–20",s:"wrist",
+ st:["Сядьте, предплечье лежит на бедре ладонью вверх, кисть свисает за колено.","Зажмите петлю стопой и ладонью, согните кисть вверх до упора.","Плавно опустите кисть."],
+ tp:["Предплечье остаётся неподвижным.","Начните с лёгкого сопротивления: сухожилия адаптируются медленнее мышц."]},
+{id:"rwrist",n:"Разгибания запястий с эспандером",m:"Предплечья",r:"3 × 15–20",s:"wrist",
+ st:["Предплечье лежит на бедре ладонью вниз, кисть свисает за колено, резина под стопой.","Разогните кисть вверх, сохраняя предплечье неподвижным.","Медленно опустите кисть."],
+ tp:["Разгибатели слабее сгибателей — берите лёгкое сопротивление.","Выполняйте обе версии для баланса и здоровья локтей."]}
+];
+var E={};EX.forEach(function(e){E[e.id]=e});
+
+/* ---------- Языки и настройки ---------- */
+var LANGS={ru:"Русский",en:"English",es:"Español"};
+var LOC={ru:"ru-RU",en:"en-US",es:"es-ES"};
+var T={
+ru:{title:"Перекладина — трекер калистеники",brand:"Перекладина",sub:"Личный трекер калистеники · турник и эспандеры",today:"Сегодня",prev:"Предыдущий месяц",next:"Следующий месяц",prog:"{d} из {w} тренировок · дней в месяце: {n}",rest:"Отдых",restFull:"Полный отдых",note:"Отдых между подходами 60–90 с. Опускание — медленно, 2–3 секунды.",done:"✓ День выполнен",fin:"Завершить день",undo:"Отменить отметки дня",how:"Как выполнять",inj:"Как избежать травм",lt:"тренировка",lr:"отдых",ld:"выполнено",set:"Настройки",lang:"Язык",plan:"Что качаем",base:"Базовая нагрузка",vol:"объём",rt1:"Белок 1,6–2,2 г на кг веса и достаточно воды.",rt2:"Если чувствуете накопленную усталость в суставах — добавьте ещё один день отдыха.",sec:"с",leg:"на ногу",max:"максимум",chk:"Выполнено: ",close:"Закрыть",gnote:"Интерфейс и названия переведены, подробные гайды пока на русском и английском.",
+ mn:{c:"Грудь",t:"Трицепс",b:"Спина",bi:"Бицепс",k:"Икры",f:"Предплечья"},ms:{c:"Грудь",t:"Трицепс",b:"Спина",bi:"Бицепс",k:"Икры",f:"Предпл."}},
+en:{title:"The Bar — calisthenics tracker",brand:"The Bar",sub:"Personal calisthenics tracker · pull-up bar & bands",today:"Today",prev:"Previous month",next:"Next month",prog:"{d} of {w} workouts · days in month: {n}",rest:"Rest",restFull:"Full rest",note:"Rest 60–90 s between sets. Lower slowly, 2–3 seconds.",done:"✓ Day completed",fin:"Finish day",undo:"Undo day marks",how:"How to do it",inj:"Avoiding injury",lt:"workout",lr:"rest",ld:"done",set:"Settings",lang:"Language",plan:"Train",base:"Base program",vol:"volume",rt1:"Protein 1.6–2.2 g per kg of bodyweight and plenty of water.",rt2:"If your joints feel worn out, add another rest day.",sec:"s",leg:"per leg",max:"max",chk:"Done: ",close:"Close",gnote:"Interface and exercise names are translated; detailed guides are currently in Russian and English.",
+ mn:{c:"Chest",t:"Triceps",b:"Back",bi:"Biceps",k:"Calves",f:"Forearms"},ms:{c:"Chest",t:"Triceps",b:"Back",bi:"Biceps",k:"Calves",f:"Forearm"}},
+es:{title:"La Barra — entrenador de calistenia",brand:"La Barra",sub:"Tu entrenador de calistenia · barra y bandas",today:"Hoy",prev:"Mes anterior",next:"Mes siguiente",prog:"{d} de {w} entrenamientos · días del mes: {n}",rest:"Descanso",restFull:"Descanso total",note:"Descanso entre series: 60–90 s. Bajada lenta, 2–3 segundos.",done:"✓ Día completado",fin:"Terminar el día",undo:"Deshacer marcas del día",how:"Cómo hacerlo",inj:"Cómo evitar lesiones",lt:"entreno",lr:"descanso",ld:"hecho",set:"Ajustes",lang:"Idioma",plan:"Qué entrenar",base:"Carga básica",vol:"volumen",rt1:"Proteína 1,6–2,2 g por kg de peso y mucha agua.",rt2:"Si notas fatiga acumulada en las articulaciones, añade otro día de descanso.",sec:"s",leg:"por pierna",max:"máximo",chk:"Hecho: ",close:"Cerrar",gnote:"La interfaz y los nombres están traducidos; las guías detalladas están por ahora en ruso e inglés.",
+ mn:{c:"Pecho",t:"Tríceps",b:"Espalda",bi:"Bíceps",k:"Gemelos",f:"Antebrazos"},ms:{c:"Pecho",t:"Tríceps",b:"Espalda",bi:"Bíceps",k:"Gemelos",f:"Antebr."}}
+};
+Object.assign(T.ru,{ai:"✦ ИИ-режим",aiTitle:"ИИ-анализ телосложения",aiDisc:"Только для взрослых (18+). Фото отправляется на анализ в Claude. Уменьшенные копии и оценка хранятся только в вашем браузере (Настройки → Оценка), их можно удалить. Это оценка для тренировок, а не медицинская рекомендация.",aiPick:"Выбрать фото",tNone:"Введите хотя бы один результат.",test:"Тест без фото",tPu:"Отжимания, максимум",tPl:"Подтягивания, максимум",tHg:"Вис на турнике, секунд",tCa:"Подъёмы на носки, раз",tGo:"Рассчитать по результатам",tSum:"Оценка рассчитана по вашим результатам в упражнениях, без фото.",tWhy:"Отжимания определяют уровень груди и трицепса, подтягивания — спины и бицепса, вис — предплечий, подъёмы на носки — икр. Общая оценка — среднее по шести группам. Повторите тест через 3–4 недели, чтобы увидеть прогресс.",aiExp:"Это фото не подходит для анализа.",gT:"Добро пожаловать",gS:"Зарегистрируйтесь, чтобы пользоваться приложением",gL:"Проверяем аккаунт…",aOut:"Выйти",aDel:"Удалить мой аккаунт",aPw:"Введите пароль для подтверждения",aConf:"Удалить пользователя?",lastAdm:"Нельзя трогать последнего администратора",blk:"Заблокировать",unblk:"Разблокировать",acc:"Аккаунт",accNo:"Регистрация работает, когда вы открываете приложение в Claude и вошли в аккаунт. Для публичного сайта нужен отдельный сервер.",roleA:"Админ",roleU:"Пользователь",accIn:"Вы зарегистрированы: {n}",accOut:"Удалить мою регистрацию",accName:"Имя",accMail:"Email",accCons:"Согласен(на), что владелец приложения увидит моё имя и email",accGo:"Зарегистрироваться",accBad:"Введите имя, корректный email и подтвердите согласие.",accFail:"Не удалось сохранить. Проверьте, что у вас есть доступ к странице.",accUsers:"Зарегистрированные",accEmpty:"Пока никого нет.",hist:"Оценка",histEmpty:"Пока нет оценок. Сделайте анализ в ИИ-режиме.",more:"Подробнее",del:"Удалить",back:"Назад",why:"Почему такая оценка",clear:"Удалить все оценки и фото",aiSaved:"Оценка сохранена в Настройки → Оценка.",aiHint:"Можно загрузить до 3 фото: торс, руки, предплечья, ноги или отдельно любую мышцу, например икры. Мышцы, которых нет на новых фото, сохраняют прошлую оценку.",aiGo:"Анализировать",aiStop:"Остановить",aiBusy:"Анализирую…",aiScore:"общая оценка",aiPros:"Плюсы",aiCons:"Минусы",aiLv:"Развитие мышц",aiApply:"Применить к программе",aiWeak:"слабое место: +1 подход",aiNo:"ИИ-анализ сейчас недоступен. Попробуйте позже.",aiFail:"Не удалось проанализировать. Попробуйте другое фото.",aiMinor:"Режим доступен только взрослым.",aiNoP:"На фото не видно мышц. Загрузите фото тела или нужной мышцы.",aiRate:"Дневной лимит анализов исчерпан. Попробуйте завтра.",aiImg:"Файл не подходит. Выберите другое фото."});
+Object.assign(T.en,{ai:"✦ AI mode",aiTitle:"AI physique analysis",aiDisc:"Adults only (18+). Your photos are sent to Claude for analysis. Small copies and the rating are stored only in your browser (Settings → Rating) and can be deleted. This is training feedback, not medical advice.",aiPick:"Choose photo",tNone:"Enter at least one result.",test:"No-photo test",tPu:"Push-ups, max",tPl:"Pull-ups, max",tHg:"Dead hang, seconds",tCa:"Calf raises, reps",tGo:"Calculate from results",tSum:"Rating calculated from your exercise results, no photo.",tWhy:"Push-ups set the level of chest and triceps, pull-ups of back and biceps, the hang of forearms, calf raises of calves. The overall score is the average of the six groups. Repeat the test in 3–4 weeks to see progress.",aiExp:"This photo cannot be analyzed.",gT:"Welcome",gS:"Register to use the app",gL:"Checking your account…",aOut:"Log out",aDel:"Delete my account",aPw:"Enter your password to confirm",aConf:"Delete this user?",lastAdm:"You cannot change the last administrator",blk:"Block",unblk:"Unblock",acc:"Account",accNo:"Registration works when you open the app inside Claude while signed in. A public website needs its own server.",roleA:"Admin",roleU:"User",accIn:"You are registered: {n}",accOut:"Delete my registration",accName:"Name",accMail:"Email",accCons:"I agree that the app owner can see my name and email",accGo:"Register",accBad:"Enter a name, a valid email and confirm consent.",accFail:"Could not save. Check that you have access to this page.",accUsers:"Registered",accEmpty:"Nobody yet.",hist:"Rating",histEmpty:"No ratings yet. Run an analysis in AI mode.",more:"Details",del:"Delete",back:"Back",why:"Why this score",clear:"Delete all ratings and photos",aiSaved:"Rating saved in Settings → Rating.",aiHint:"You can upload up to 3 photos: torso, arms, forearms, legs, or any single muscle such as calves. Muscles not shown keep their previous rating.",aiGo:"Analyze",aiStop:"Stop",aiBusy:"Analyzing…",aiScore:"overall score",aiPros:"Strengths",aiCons:"Weak points",aiLv:"Muscle development",aiApply:"Apply to my program",aiWeak:"weak spot: +1 set",aiNo:"AI analysis is unavailable right now. Try again later.",aiFail:"Analysis failed. Try another photo.",aiMinor:"This mode is for adults only.",aiNoP:"No muscles visible. Upload a photo of your body or the muscle you want checked.",aiRate:"Daily analysis limit reached. Try again tomorrow.",aiImg:"This file cannot be used. Choose another photo."});
+Object.assign(T.es,{ai:"✦ Modo IA",aiTitle:"Análisis físico con IA",aiDisc:"Solo adultos (18+). Las fotos se envían a Claude para el análisis. Copias reducidas y la valoración se guardan solo en tu navegador (Ajustes → Valoración) y se pueden borrar. Es una valoración para entrenar, no un consejo médico.",aiPick:"Elegir foto",tNone:"Introduce al menos un resultado.",test:"Prueba sin foto",tPu:"Flexiones, máximo",tPl:"Dominadas, máximo",tHg:"Colgado, segundos",tCa:"Elevaciones de gemelos, reps",tGo:"Calcular con los resultados",tSum:"Valoración calculada con tus resultados en los ejercicios, sin foto.",tWhy:"Las flexiones definen el nivel de pecho y tríceps, las dominadas de espalda y bíceps, el colgado de antebrazos y las elevaciones de gemelos. La valoración general es el promedio de los seis grupos. Repite la prueba en 3–4 semanas para ver el progreso.",aiExp:"Esta foto no se puede analizar.",gT:"Bienvenido",gS:"Regístrate para usar la app",gL:"Comprobando tu cuenta…",acc:"Cuenta",accNo:"El registro funciona al abrir la app dentro de Claude con tu sesión iniciada. Un sitio público necesita su propio servidor.",roleA:"Admin",roleU:"Usuario",accIn:"Estás registrado: {n}",accOut:"Eliminar mi registro",accName:"Nombre",accMail:"Correo",accCons:"Acepto que el propietario de la app vea mi nombre y correo",accGo:"Registrarme",accBad:"Introduce un nombre, un correo válido y confirma el consentimiento.",accFail:"No se pudo guardar. Comprueba que tienes acceso a esta página.",accUsers:"Registrados",accEmpty:"Todavía nadie.",hist:"Valoración",histEmpty:"Aún no hay valoraciones. Haz un análisis en el modo IA.",more:"Detalles",del:"Eliminar",back:"Atrás",why:"Por qué esta valoración",clear:"Borrar todas las valoraciones y fotos",aiSaved:"Valoración guardada en Ajustes → Valoración.",aiHint:"Puedes subir hasta 3 fotos: torso, brazos, antebrazos, piernas o un solo músculo, como los gemelos. Los músculos que no salgan conservan su valoración anterior.",aiGo:"Analizar",aiStop:"Detener",aiBusy:"Analizando…",aiScore:"valoración general",aiPros:"Puntos fuertes",aiCons:"Puntos débiles",aiLv:"Desarrollo muscular",aiApply:"Aplicar a mi programa",aiWeak:"punto débil: +1 serie",aiNo:"El análisis con IA no está disponible ahora. Inténtalo más tarde.",aiFail:"No se pudo analizar. Prueba con otra foto.",aiMinor:"Este modo es solo para adultos.",aiNoP:"No se ven músculos. Sube una foto del cuerpo o del músculo que quieres revisar.",aiRate:"Has alcanzado el límite diario de análisis. Inténtalo mañana.",aiImg:"Este archivo no sirve. Elige otra foto."});
+var NM={
+en:{push:"Push-ups",bpress:"Band chest press",inc:"Feet-elevated push-ups",wide:"Wide push-ups",diamond:"Diamond push-ups",btri:"Band triceps pushdown",pullup:"Wide-grip pull-ups",chinup:"Chin-ups",brow:"Band row",bcurl:"Band biceps curl",hammer:"Band hammer curl",hang:"Dead hang",calf:"Calf raises",calf1:"Single-leg calf raises",bcalf:"Seated band calf raise",wrist:"Band wrist curl",rwrist:"Band reverse wrist curl"},
+es:{push:"Flexiones",bpress:"Press de pecho con banda",inc:"Flexiones con pies elevados",wide:"Flexiones anchas",diamond:"Flexiones diamante",btri:"Extensión de tríceps con banda",pullup:"Dominadas agarre ancho",chinup:"Dominadas supinas",brow:"Remo con banda",bcurl:"Curl de bíceps con banda",hammer:"Curl martillo con banda",hang:"Colgarse de la barra",calf:"Elevaciones de gemelos",calf1:"Elevaciones de gemelos a una pierna",bcalf:"Gemelos sentado con banda",wrist:"Curl de muñeca con banda",rwrist:"Curl inverso de muñeca con banda"}
+};
+var GE={
+push:{st:["Start in a plank with hands slightly wider than shoulders, body in a straight line.","Lower slowly (2–3 s) until your chest is 3–5 cm from the floor, elbows at about 45°.","Press up to full arm extension without letting your hips sag."],tp:["Brace your abs and glutes to avoid sagging at the lower back.","If your wrists hurt, use fists or warm them up first."]},
+bpress:{st:["Loop the band behind your back under the shoulder blades and hold the ends at chest height.","Exhale and press your hands forward until the arms are straight.","Return slowly over 3 s, resisting the band."],tp:["Keep the band low on the back so it never rides up to the neck.","Inspect the band for cracks before every session."]},
+inc:{st:["Put your feet on a stable chair or sofa, hands on the floor slightly wider than shoulders.","Lower until your chest is just above the floor, body straight.","Press up, keeping the shoulder blades pulled together."],tp:["Start at 30–40 cm: the higher the feet, the more load on the shoulders.","Keep the neck neutral; do not crane your head up."]},
+wide:{st:["Plank with hands clearly wider than shoulders, fingers forward or slightly out.","Lower until the chest is just above the floor, body straight.","Press up, squeezing the chest."],tp:["Keep elbows at 60–70°, not flared straight out: it protects the shoulders.","If the shoulder joint hurts, narrow your hand position."]},
+diamond:{st:["Place your hands under the chest with thumbs and index fingers forming a diamond.","Lower while keeping the elbows close to the ribs.","Press up to full elbow extension."],tp:["Too hard? Do them from the knees, keeping a straight line.","If the elbows complain, place the hands a little wider."]},
+btri:{st:["Anchor the band to the pull-up bar above head height.","Keep elbows tight to your sides and hold the band.","Push down until the arms are straight, pause 1 s, return slowly."],tp:["Only the forearms move; elbows stay in place.","Anchor the band securely: a snap-back can hit the face."]},
+pullup:{st:["Overhand grip wider than shoulders, hang with straight arms and shoulder blades slightly down.","Drive the elbows down until your chin clears the bar.","Lower for 2–3 s to a full hang."],tp:["No swinging or kicking.","Not strong enough yet? Practice slow negatives from a step."]},
+chinup:{st:["Underhand grip at shoulder width, hang with straight arms.","Pull your chest to the bar while squeezing the biceps.","Lower under control to a full hang."],tp:["Do not drop down: sudden straightening loads the elbows.","Look straight ahead and keep the neck neutral."]},
+brow:{st:["Anchor the band at chest height and step back until it is taut.","Squeeze the shoulder blades and pull the hands to your waist, elbows along the body.","Pause 1 s and return slowly."],tp:["Keep the back straight, do not lean back.","Do not shrug the shoulders."]},
+bcurl:{st:["Stand on the middle of the band and hold the ends with an underhand grip.","Curl up without moving the elbows from your sides.","Lower over 3 s."],tp:["Do not swing the body: it takes the load off the biceps.","Do not lock the elbows hard at the bottom."]},
+hammer:{st:["Stand on the middle of the band and hold the ends with a neutral grip (palms facing each other).","Curl up without moving the elbows from your sides.","Pause 1 s and lower slowly."],tp:["Keep the wrists straight.","Do not let the elbows drift forward."]},
+hang:{st:["Grab the bar overhand, slightly wider than shoulders.","Hang with straight arms, shoulders slightly away from the ears.","Hold until the forearms burn, then step down calmly."],tp:["Add 3–5 seconds each week.","If the palms get sore, use chalk or gloves."]},
+calf:{st:["Stand with the balls of your feet on a step edge, heels hanging, holding a support.","Rise as high as possible on your toes and pause 1 s.","Lower the heels below the step over 3 s."],tp:["Keep the knees straight but not locked.","No bouncing: use a controlled range."]},
+calf1:{st:["Stand on one foot on a step, other leg bent, one hand on a support.","Rise onto the toes, pause, and lower to a full stretch.","Switch legs after the set."],tp:["Use the hand only for balance.","Do not let the knee collapse inward."]},
+bcalf:{st:["Sit on a chair, pass the band under the ball of your foot and hold the ends near the knee.","Lift the heel against the resistance of the band.","Pause 1 s and lower smoothly."],tp:["Choose a tension that makes the last reps hard.","Use a non-slip surface so the band does not slip off."]},
+wrist:{st:["Sit with the forearm on your thigh, palm up, wrist hanging past the knee.","Pin the band under your foot and curl the wrist up as far as possible.","Lower smoothly."],tp:["Keep the forearm still.","Start light: tendons adapt more slowly than muscles."]},
+rwrist:{st:["Forearm on the thigh, palm down, wrist past the knee, band under your foot.","Extend the wrist upward while keeping the forearm still.","Lower slowly."],tp:["Extensors are weaker than flexors: use light resistance.","Train both versions for balance and elbow health."]}
+};
+var SK="calisthenics-settings-v1",SET={lang:null,mode:"base",mus:[],ai:null};
+try{var so=JSON.parse(localStorage.getItem(SK));if(so&&typeof so==="object")SET=Object.assign(SET,so)}catch(e){}
+if(!T[SET.lang])SET.lang=(navigator.language||"en").slice(0,2).toLowerCase();
+if(!T[SET.lang])SET.lang="en";
+function saveSet(){try{localStorage.setItem(SK,JSON.stringify(SET))}catch(e){}pushState()}
+function tr(k){var d=T[SET.lang];return d&&d[k]!=null?d[k]:(T.en[k]!=null?T.en[k]:T.ru[k])}
+function mn(x){return T[SET.lang].mn[x]}
+function ms(x){return T[SET.lang].ms[x]}
+function cap(s){return s.charAt(0).toUpperCase()+s.slice(1)}
+function nm(e){return SET.lang==="ru"?e.n:NM[SET.lang][e.id]}
+function gd(e){return SET.lang==="ru"?e:GE[e.id]}
+function fmt(r){return r.replace("{max}",tr("max")).replace("{s}",tr("sec")).replace("{leg}",tr("leg"))}
+function weak(e){var v=SET.mode==="ai"&&SET.ai&&SET.ai.lv&&SET.ai.lv[GM[e.id].split(",")[0]];return !!v&&v<=2}
+function dose(e){return fmt(weak(e)?e.r.replace(/^\d+/,function(x){return +x+1}):e.r)}
+
+/* ---------- Программа ---------- */
+var ALL=["c","t","b","bi","k","f"],CAT={c:0,t:0,b:1,bi:1,k:2,f:2};
+var GM={push:"c",bpress:"c",inc:"c",wide:"c",diamond:"t",btri:"t",pullup:"b",chinup:"bi,b",brow:"b",bcurl:"bi",hammer:"bi,f",hang:"f",calf:"k",calf1:"k",bcalf:"k",wrist:"f",rwrist:"f"};
+function mus(e){return GM[e.id].split(",").map(mn).join(" · ")}
+var PUSH=["push","bpress","inc","diamond","btri"],PUSHB=["inc","wide","diamond","bpress","btri"];
+var PULL=["pullup","chinup","brow","bcurl","hang"],PULLB=["chinup","pullup","brow","hammer","hang"];
+var LEGS=["calf","calf1","bcalf","wrist","rwrist","hang"],LEGSB=["calf1","calf","bcalf","rwrist","wrist","hang"];
+var BASE=[{m:["c","t"],ex:PUSH},{m:["b","bi"],ex:PULL},{m:["k","f"],ex:LEGS},{m:["c","t"],ex:PUSHB,v:1},{m:["b","bi"],ex:PULLB,v:1},{m:["k","f"],ex:LEGSB,v:1},{rest:1}];
+var PLAN=BASE;
+function buildPlan(sm){
+  var cats=[[],[],[]],days=[];
+  sm.forEach(function(x){cats[CAT[x]].push(x)});
+  cats.forEach(function(ms2,ci){
+    if(!ms2.length)return;
+    var ex=EX.filter(function(e){var tg=GM[e.id].split(",");return CAT[tg[0]]===ci&&tg.some(function(x){return sm.indexOf(x)>-1})}).map(function(e){return e.id});
+    days.push({m:ms2,ex:ex});
+  });
+  var pat=[[0,-1,0,-1,0,-1,-1],[0,1,0,1,0,1,-1],[0,1,2,0,1,2,-1]][days.length-1];
+  return pat.map(function(i){return i<0?{rest:1}:days[i]});
+}
+function buildAI(lv){
+  var days=[[],[],[]];
+  ALL.forEach(function(m){
+    var list=EX.filter(function(e){return GM[e.id].split(",")[0]===m}).map(function(e){return e.id});
+    var l=+lv[m]||3,n=l<=2?list.length:l===3?Math.max(2,Math.ceil(list.length*0.67)):Math.max(1,Math.ceil(list.length*0.34));
+    days[CAT[m]]=days[CAT[m]].concat(list.slice(0,Math.min(n,list.length)));
+  });
+  return [0,1,2,0,1,2,-1].map(function(i){return i<0?{rest:1}:{m:ALL.filter(function(x){return CAT[x]===i}),ex:days[i]}});
+}
+function applyPlan(){PLAN=(SET.mode==="ai"&&SET.ai)?buildAI(SET.ai.lv):(SET.mode==="custom"&&SET.mus.length)?buildPlan(SET.mus):BASE}
+function dayName(p){return p.m.map(mn).join(" · ")+(p.v?" ("+tr("vol")+")":"")}
+
+/* ---------- Состояние и даты ---------- */
+function $(s){return document.querySelector(s)}
+function pad(n){return String(n).padStart(2,"0")}
+function K(y,m,d){return y+"-"+pad(m+1)+"-"+pad(d)}
+function dow(y,m,d){return (new Date(y,m,d).getDay()+6)%7}
+var now=new Date(),TK=K(now.getFullYear(),now.getMonth(),now.getDate());
+var vy=now.getFullYear(),vm=now.getMonth(),sel=TK;
+function dn(k,p){var s=S[k];return !!(p.ex&&s&&(s.f||p.ex.every(function(i){return s.d&&s.d[i]})))}
+function cnt(k,p){var s=S[k];return p.ex.filter(function(i){return s&&s.d&&s.d[i]}).length}
+function st(k){var s=S[k];if(!s||typeof s!=="object")s=S[k]={};if(!s.d)s.d={};return s}
+
+/* ---------- Рендер ---------- */
+function applyText(){
+  document.documentElement.lang=SET.lang;document.title=tr("title");
+  $("#bn").textContent=tr("brand");$("#bs").textContent=tr("sub");$("#bt").textContent=tr("today");
+  $("#bp").setAttribute("aria-label",tr("prev"));$("#bx").setAttribute("aria-label",tr("next"));
+  $("#gs").setAttribute("aria-label",tr("set"));$("#ac").setAttribute("aria-label",tr("acc"));$(".x").setAttribute("aria-label",tr("close"));
+}
+function renderPlan(){
+  var cu=SET.mode==="custom",on=cu?SET.mus:ALL;
+  $("#plan").innerHTML='<div class="pl"><span class="plt">'+tr("plan")+'</span><div class="chips">'+ALL.map(function(x){var a=on.indexOf(x)>-1;return '<button class="chip'+(a?" on":"")+'" data-a="mus" data-x="'+x+'" aria-pressed="'+a+'">'+mn(x)+"</button>"}).join("")+'</div><span class="rt"><button class="chip ai'+(SET.mode==="ai"?" on":"")+'" data-a="ai">'+tr("ai")+'</button><button class="chip'+(SET.mode==="base"?" on base2":"")+'" data-a="base" aria-pressed="'+(SET.mode==="base")+'">'+tr("base")+"</button></span></div>";
+}
+function render(){
+  var loc=LOC[SET.lang],dim=new Date(vy,vm+1,0).getDate(),first=dow(vy,vm,1),w=0,done=0;
+  $("#mon").textContent=cap(new Date(vy,vm,1).toLocaleDateString(loc,{month:"long"}))+" "+vy;
+  renderPlan();
+  var h='<div class="g">';
+  for(var i=0;i<7;i++)h+='<div class="wd">'+cap(new Date(2024,0,1+i).toLocaleDateString(loc,{weekday:"short"}).replace(".",""))+"</div>";
+  for(i=0;i<first;i++)h+="<span></span>";
+  for(var d=1;d<=dim;d++){
+    var k=K(vy,vm,d),p=PLAN[dow(vy,vm,d)],c=["d"],sub="";
+    if(p.ex){w++;if(dn(k,p)){done++;c.push("done");sub="✓"}else{c.push("work");var n=cnt(k,p);sub=n?n+"/"+p.ex.length:""}}else c.push("rest");
+    if(k===TK)c.push("today");
+    if(k===sel)c.push("sel");
+    var lb=p.ex?p.m.map(ms):[tr("rest")];
+    h+='<button class="'+c.join(" ")+'" data-a="pick" data-k="'+k+'" aria-label="'+d+" "+new Date(vy,vm,d).toLocaleDateString(loc,{month:"long"})+", "+(p.ex?dayName(p):tr("restFull"))+'">'+d+'<span class="lb">'+lb.join("<br>")+"</span>"+(sub?"<small>"+sub+"</small>":"")+"</button>";
+  }
+  h+='</div><div class="lg"><span><i class="a"></i>'+tr("lt")+'</span><span><i class="r"></i>'+tr("lr")+'</span><span><i class="o"></i>'+tr("ld")+"</span></div>";
+  $("#cal").innerHTML=h;
+  var pct=w?Math.round(done/w*100):0;
+  $("#prog").innerHTML='<div class="pt"><b>'+pct+"%</b><span>"+tr("prog").replace("{d}",done).replace("{w}",w).replace("{n}",dim)+'</span></div><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="'+pct+'"><i style="width:'+pct+'%"></i></div>';
+
+  var q=sel.split("-").map(Number),p2=PLAN[dow(q[0],q[1]-1,q[2])];
+  var o='<div class="glass pnl"><h2>'+cap(new Date(q[0],q[1]-1,q[2]).toLocaleDateString(loc,{weekday:"long",day:"numeric",month:"long"}))+"</h2>";
+  if(!p2.ex){
+    o+='<span class="badge">'+tr("restFull")+'</span><div class="rs"><ul><li>'+tr("rt1")+"</li><li>"+tr("rt2")+"</li></ul></div>";
+  }else{
+    var fin=dn(sel,p2);
+    o+='<span class="badge'+(fin?" ok":"")+'">'+(fin?tr("done")+" · ":"")+dayName(p2)+'</span><p class="note">'+tr("note")+(SET.mode==="ai"?" ▲ "+tr("aiWeak"):"")+"</p>";
+    p2.ex.forEach(function(id){
+      var e=E[id],on=S[sel]&&S[sel].d&&S[sel].d[id]||fin;
+      o+='<div class="ex'+(on?" on":"")+'"><button class="ck" role="checkbox" aria-checked="'+(on?"true":"false")+'" aria-label="'+tr("chk")+nm(e)+'" data-a="tog" data-e="'+id+'"></button><div class="inf" data-a="tog" data-e="'+id+'"><div class="nm">'+nm(e)+'</div><div class="ds">'+mus(e)+" · "+dose(e)+(weak(e)?" ▲":"")+'</div></div><button class="how" data-a="how" data-e="'+id+'">'+tr("how")+"</button></div>";
+    });
+    o+=fin?'<button class="btn sec" data-a="undo">'+tr("undo")+"</button>":'<button class="btn ok" data-a="fin">'+tr("fin")+"</button>";
+  }
+  $("#day").innerHTML=o+"</div>";
+}
+
+/* ---------- Модальные окна ---------- */
+var last=null;
+function showM(){$("#md").hidden=false;document.body.classList.add("lock");$(".x").focus()}
+function openM(id){
+  var e=E[id],g=gd(e);last=document.activeElement;
+  $("#mt").textContent=nm(e);$("#ms").textContent=mus(e)+" · "+dose(e);
+  $("#mb").innerHTML='<div class="viz">'+SC[e.s]()+"</div><h3>"+tr("how")+"</h3><ol>"+g.st.map(function(x){return "<li>"+x+"</li>"}).join("")+"</ol><h3>"+tr("inj")+"</h3><ul>"+g.tp.map(function(x){return "<li>"+x+"</li>"}).join("")+"</ul>";
+  var sv=$("#mb svg");
+  if(sv&&window.matchMedia&&matchMedia("(prefers-reduced-motion: reduce)").matches&&sv.pauseAnimations)sv.pauseAnimations();
+  showM();
+}
+function openSet(keep){
+  if(!keep)last=document.activeElement;
+  $("#mt").textContent=tr("set");$("#ms").textContent="";
+  $("#mb").innerHTML="<h3>"+tr("lang")+'</h3><div class="seg">'+Object.keys(LANGS).map(function(l){return '<button class="chip'+(l===SET.lang?" on":"")+'" data-a="lang" data-l="'+l+'">'+LANGS[l]+"</button>"}).join("")+'</div><p class="note">'+tr("gnote")+"</p>"+histHTML();
+  showM();
+}
+function closeM(){if(aiCtl)aiCtl.abort();aiFiles=[];
+  $("#md").hidden=true;document.body.classList.remove("lock");
+  if(last&&last.focus)last.focus();
+}
+function togMus(x){
+  if(SET.mode!=="custom"){SET.mode="custom";SET.mus=ALL.slice()}
+  var i=SET.mus.indexOf(x);
+  if(i>-1){if(SET.mus.length>1)SET.mus.splice(i,1)}else SET.mus.push(x);
+  SET.mus.sort(function(a,b){return ALL.indexOf(a)-ALL.indexOf(b)});
+}
+
+/* ---------- ИИ-режим ---------- */
+var aiFiles=[],aiCtl=null;
+var HK="calisthenics-history-v1",H=[];
+try{var h0=JSON.parse(localStorage.getItem(HK));if(Array.isArray(h0))H=h0.filter(function(e){return e&&typeof e.id==="string"&&typeof e.score==="number"&&Array.isArray(e.pros)&&Array.isArray(e.cons)}).slice(0,20)}catch(e){}
+function saveH(){for(var n=H.length;;){try{localStorage.setItem(HK,JSON.stringify(H.slice(0,n)));H=H.slice(0,n);return}catch(e){if(n<=1)return;n=Math.floor(n/2)}}}
+function safeImg(x){return typeof x==="string"&&/^data:image\/jpeg;base64,[A-Za-z0-9+\/=]+$/.test(x)}
+function dstr(t,o){return new Date(+t||0).toLocaleDateString(LOC[SET.lang],o||{day:"numeric",month:"long",year:"numeric"})}
+function shrink(f){
+  return createImageBitmap(f).then(function(b){
+    var k=Math.min(1,512/Math.max(b.width,b.height)),c=document.createElement("canvas");
+    c.width=Math.max(1,Math.round(b.width*k));c.height=Math.max(1,Math.round(b.height*k));
+    c.getContext("2d").drawImage(b,0,0,c.width,c.height);
+    return new Promise(function(res){c.toBlob(function(bl){res(bl||f)},"image/jpeg",0.75)});
+  }).catch(function(){return f});
+}
+function thumb(f){
+  return createImageBitmap(f).then(function(b){
+    var k=Math.min(1,180/Math.max(b.width,b.height)),c=document.createElement("canvas");
+    c.width=Math.max(1,Math.round(b.width*k));c.height=Math.max(1,Math.round(b.height*k));
+    c.getContext("2d").drawImage(b,0,0,c.width,c.height);
+    return c.toDataURL("image/jpeg",0.7);
+  }).catch(function(){return ""});
+}
+function addHist(r,th){
+  var t=Date.now();
+  H.unshift({id:String(t),t:t,th:th,score:r.score,summary:r.summary,pros:r.pros,cons:r.cons,raw:r.raw,reasons:r.reasons,why:r.why});
+  H=H.slice(0,20);saveH();
+}
+function resetAI(){
+  aiFiles=[];var pv=$("#aip");if(pv)pv.textContent="";
+  var b=$("#aigo");if(b)b.disabled=true;
+  var fi=$("#aif");if(fi)fi.value="";
+}
+function histHTML(){
+  var h="<h3>"+tr("hist")+"</h3>";
+  if(!H.length)return h+'<p class="note">'+tr("histEmpty")+"</p>";
+  return h+H.map(function(e){
+    var im=(e.th||[]).filter(safeImg)[0];
+    return '<div class="hi"><div class="hth">'+(im?'<img alt="" src="'+im+'">':"")+'</div><div class="hin"><b>'+esc(e.score)+" / 10</b><span>"+dstr(e.t,{day:"numeric",month:"short",year:"numeric"})+'</span></div><button class="how" data-a="hist" data-i="'+esc(e.id)+'">'+tr("more")+'</button><button class="x2" data-a="hdel" data-i="'+esc(e.id)+'" aria-label="'+tr("del")+'">🗑</button></div>';
+  }).join("")+'<button class="btn sec" data-a="hclear">'+tr("clear")+"</button>";
+}
+function openDetail(id){
+  var e=H.filter(function(x){return x.id===id})[0];if(!e)return;
+  $("#mt").textContent=tr("hist")+" · "+dstr(e.t);$("#ms").textContent="";
+  $("#mb").innerHTML='<button class="chip" data-a="hback">← '+tr("back")+'</button><div class="aipv" style="margin-top:12px">'+(e.th||[]).filter(safeImg).map(function(x){return '<img alt="" src="'+x+'">'}).join("")+'</div><div class="aiscore"><b>'+esc(e.score)+"</b><span>/ 10<br>"+tr("aiScore")+"</span></div><p>"+esc(e.summary||"")+"</p><h3>"+tr("why")+"</h3><p>"+esc(e.why||"")+"</p><h3>"+tr("aiPros")+"</h3><ul>"+e.pros.map(li).join("")+"</ul><h3>"+tr("aiCons")+"</h3><ul>"+e.cons.map(li).join("")+"</ul><h3>"+tr("aiLv")+"</h3>"+ALL.map(function(m){var v=e.raw&&e.raw[m];return '<div class="mrow"><span>'+mn(m)+'</span><div class="mbar"><i style="width:'+(v?v*20:0)+'%"></i></div><em>'+(v?v+"/5":"—")+"</em></div>"+(e.reasons&&e.reasons[m]?'<p class="rsn">'+esc(e.reasons[m])+"</p>":"")}).join("");
+  $(".sheet").scrollTop=0;
+}
+function esc(x){return String(x).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})}
+function li(x){return "<li>"+esc(x)+"</li>"}
+function norm(j){
+  if(!j||typeof j!=="object"||j.error)return null;
+  var lv={},raw={};
+  ALL.forEach(function(m){var v=Math.round(+(j.muscles&&j.muscles[m]));var rx=j.reasons&&j.reasons[m];raw[m]=(v>=1&&v<=5&&typeof rx==="string"&&rx.trim().length>3)?v:null;lv[m]=raw[m]||(SET.ai&&SET.ai.lv&&SET.ai.lv[m])||null});
+  if(!ALL.some(function(m){return raw[m]}))return null;
+  var sc=Math.round(+j.score*10)/10;var rs={};ALL.forEach(function(m){var x=j.reasons&&j.reasons[m];rs[m]=typeof x==="string"?x.slice(0,300):""});
+  if(!(sc>=1&&sc<=10))return null;
+  function arr(a){return (Array.isArray(a)?a:[]).slice(0,5).map(function(x){return String(x).slice(0,220)})}
+  return {score:sc,summary:String(j.summary||"").slice(0,500),pros:arr(j.pros),cons:arr(j.cons),lv:lv,raw:raw,reasons:rs,why:String(j.why||"").slice(0,900)};
+}
+function resHTML(r){
+  return '<div class="aiscore"><b>'+r.score+'</b><span>/ 10<br>'+tr("aiScore")+"</span></div><p>"+esc(r.summary)+"</p><h3>"+tr("aiPros")+"</h3><ul>"+r.pros.map(li).join("")+"</ul><h3>"+tr("aiCons")+"</h3><ul>"+r.cons.map(li).join("")+"</ul><h3>"+tr("aiLv")+"</h3>"+ALL.map(function(m){var v=r.raw&&r.raw[m];return '<div class="mrow"><span>'+mn(m)+'</span><div class="mbar"><i style="width:'+(v?v*20:0)+'%"></i></div><em>'+(v?v+"/5":"—")+"</em></div>"+(r.reasons&&r.reasons[m]?'<p class="rsn">'+esc(r.reasons[m])+"</p>":"")}).join("")+'<p class="note">'+tr("aiSaved")+'</p><button class="btn ok" data-a="aiapply">'+tr("aiApply")+"</button>";
+}
+function aiStatus(t){var el=$("#aist");if(el)el.textContent=t||""}
+function openAI(){
+  last=document.activeElement;aiFiles=[];
+  $("#mt").textContent=tr("aiTitle");$("#ms").textContent="";
+  $("#mb").innerHTML='<p class="note">'+tr("aiDisc")+'</p><p class="note">'+tr("aiHint")+'</p><div class="aiup"><label class="btn sec aipick">'+tr("aiPick")+'<input id="aif" class="vh" type="file" accept="image/*" multiple></label><div id="aip" class="aipv"></div></div><button class="btn" id="aigo" data-a="aigo" disabled>'+tr("aiGo")+'</button><div id="aist" class="note" role="status"></div><div id="aires"></div><h3>'+tr("test")+'</h3><div class="tgrid"><label>'+tr("tPu")+'<input id="tpu" type="number" min="0" inputmode="numeric"></label><label>'+tr("tPl")+'<input id="tpl" type="number" min="0" inputmode="numeric"></label><label>'+tr("tHg")+'<input id="thg" type="number" min="0" inputmode="numeric"></label><label>'+tr("tCa")+'<input id="tca" type="number" min="0" inputmode="numeric"></label></div><button class="btn sec" data-a="atest">'+tr("tGo")+'</button>';
+  showM();
+}
+function toDataURL(b){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result)};r.onerror=rej;r.readAsDataURL(b)})}
+async function runAI(){
+  if(aiCtl){aiCtl.abort();return}
+  if(!aiFiles.length)return;
+  aiCtl=new AbortController();
+  var b=$("#aigo");if(b)b.textContent=tr("aiStop");
+  aiStatus(tr("aiBusy"));
+  try{
+    var imgs=await Promise.all(aiFiles.slice(0,3).map(shrink));
+    var urls=await Promise.all(imgs.map(toDataURL));
+    var resp=await fetch("/api/analyze",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({images:urls,lang:SET.lang}),signal:aiCtl.signal});
+    if(resp.status===401){location.href="/";return}
+    var j=await resp.json().catch(function(){return null});
+    if(!resp.ok){aiStatus(resp.status===429?tr("aiRate"):(resp.status===400||resp.status===413)?tr("aiImg"):resp.status===503?tr("aiNo"):tr("aiFail"));return}
+    var r=norm(j);
+    if(!r){var er=j&&j.error;aiStatus(er==="minor"?tr("aiMinor"):er==="noperson"?tr("aiNoP"):er==="explicit"?tr("aiExp"):tr("aiFail"))}
+    else{
+      SET.ai=r;saveSet();aiStatus("");var rs=$("#aires");if(rs)rs.innerHTML=resHTML(r);
+      var files=imgs;resetAI();
+      Promise.all(files.map(thumb)).then(function(th){addHist(r,th.filter(Boolean))});
+    }
+  }catch(e){aiStatus(e&&e.name==="AbortError"?"":tr("aiFail"))}
+  finally{aiCtl=null;var b2=$("#aigo");if(b2)b2.textContent=tr("aiGo")}
+}
+function lvl(v,t){var l=1;for(var i=0;i<t.length;i++)if(v>=t[i])l=i+2;return l}
+function runTest(){
+  function g(id){var v=$(id).value;return v===""?null:Math.max(0,Math.min(999,Math.floor(+v||0)))}
+  var raw={c:null,t:null,b:null,bi:null,k:null,f:null},rz={c:"",t:"",b:"",bi:"",k:"",f:""};
+  function put(ms,v,t,lab){if(v===null)return;var l=lvl(v,t);ms.forEach(function(m){raw[m]=l;rz[m]=lab+": "+v})}
+  put(["c","t"],g("#tpu"),[10,20,35,50],tr("tPu"));put(["b","bi"],g("#tpl"),[1,4,9,15],tr("tPl"));
+  put(["f"],g("#thg"),[20,40,60,90],tr("tHg"));put(["k"],g("#tca"),[20,40,60,80],tr("tCa"));
+  var rated=ALL.filter(function(m){return raw[m]});
+  if(!rated.length){aiStatus(tr("tNone"));return}
+  var sum=0;rated.forEach(function(m){sum+=raw[m]});
+  var order=rated.slice().sort(function(x,y){return raw[y]-raw[x]}),h2=Math.ceil(order.length/2);
+  function line(m){return mn(m)+" — "+raw[m]+"/5"}
+  var lv={};ALL.forEach(function(m){lv[m]=raw[m]||(SET.ai&&SET.ai.lv&&SET.ai.lv[m])||null});
+  var r={score:Math.round(sum/rated.length*20)/10,summary:tr("tSum"),pros:order.slice(0,h2).map(line),cons:order.slice(h2).reverse().map(line),lv:lv,raw:raw,reasons:rz,why:tr("tWhy")};
+  aiStatus("");SET.ai=r;saveSet();addHist(r,[]);
+  var rs=$("#aires");if(rs)rs.innerHTML=resHTML(r);
+}
+document.addEventListener("change",function(ev){
+  if(!ev.target||ev.target.id!=="aif")return;
+  aiFiles=Array.prototype.slice.call(ev.target.files||[],0,3);if(!aiFiles.length)return;
+  $("#aigo").disabled=false;aiStatus("");
+  var pv=$("#aip");pv.textContent="";
+  aiFiles.forEach(function(f){var rd=new FileReader();rd.onload=function(){var im=document.createElement("img");im.alt="";im.src=rd.result;pv.appendChild(im)};rd.readAsDataURL(f)});
+});
+
+/* ---------- Сервер: аккаунт, синхронизация, администратор ---------- */
+var ME=null,pushTm=null,OW="calisthenics-owner-v1";
+function api(path,o){
+  o=o||{};o.credentials="same-origin";
+  if(o.body&&typeof o.body!=="string"){o.body=JSON.stringify(o.body);o.headers={"Content-Type":"application/json"}}
+  return fetch(path,o).then(function(r){
+    if(r.status===401){location.href="/";throw new Error("auth")}
+    return r.json().catch(function(){return {}}).then(function(j){
+      if(!r.ok)throw Object.assign(new Error(j.error||"error"),{status:r.status});
+      return j;
+    });
+  });
+}
+function pushState(){
+  if(!ME)return;
+  clearTimeout(pushTm);
+  pushTm=setTimeout(function(){api("/api/state",{method:"PUT",body:{state:{S:S,SET:{mode:SET.mode,mus:SET.mus,ai:SET.ai,lang:SET.lang}}}}).catch(function(){})},1500);
+}
+function accMsg(t){var el=$("#accm");if(el)el.textContent=t||""}
+function boot(){
+  api("/api/me").then(function(m){
+    ME=m;
+    var ow=null;try{ow=localStorage.getItem(OW)}catch(e){}
+    if(ow&&ow!==m.id){S={};SET.mode="base";SET.mus=[];SET.ai=null;H=[];try{localStorage.removeItem(KEY);localStorage.removeItem(HK)}catch(e){}}
+    try{localStorage.setItem(OW,m.id)}catch(e){}
+    return api("/api/state");
+  }).then(function(r){
+    var st=r&&r.state;
+    if(st&&st.S&&typeof st.S==="object"){S=st.S;try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}}
+    if(st&&st.SET&&typeof st.SET==="object"){
+      SET.mode=(st.SET.mode==="custom"||st.SET.mode==="ai")?st.SET.mode:"base";
+      SET.mus=Array.isArray(st.SET.mus)?st.SET.mus.filter(function(x){return ALL.indexOf(x)>-1}):[];
+      SET.ai=(st.SET.ai&&st.SET.ai.lv&&typeof st.SET.ai.lv==="object")?st.SET.ai:null;
+      if(T[st.SET.lang])SET.lang=st.SET.lang;
+      try{localStorage.setItem(SK,JSON.stringify(SET))}catch(e){}
+    }else pushState();
+    applyPlan();applyText();render();
+  }).catch(function(){});
+}
+function openAcc(){
+  if(!ME)return;
+  last=document.activeElement;
+  $("#mt").textContent=tr("acc");$("#ms").textContent="";
+  var h='<span class="badge">'+tr(ME.role==="admin"?"roleA":"roleU")+'</span><p><b>'+esc(ME.name)+'</b><br><span class="ds">'+esc(ME.email)+'</span></p><button class="btn sec" data-a="logout">'+tr("aOut")+'</button><button class="btn sec" data-a="accdel">'+tr("aDel")+'</button><p class="rsn" id="accm" role="status"></p>';
+  if(ME.role==="admin")h+="<h3>"+tr("accUsers")+' (<span id="mcnt">0</span>)</h3><div class="tw2"><table class="ut"><tbody id="mtb"></tbody></table></div>';
+  $("#mb").innerHTML=h;showM();
+  if(ME.role==="admin")loadUsers();
+}
+function loadUsers(){
+  api("/api/admin/users").then(function(list){
+    var c=$("#mcnt"),tb=$("#mtb");if(!c||!tb)return;
+    c.textContent=list.length;
+    tb.innerHTML=list.length?list.map(function(u){
+      return "<tr><td><b>"+esc(u.name)+(u.blocked?" ⛔":"")+"</b><small>"+esc(u.email)+'</small><small>'+dstr(u.created,{day:"numeric",month:"short",year:"numeric"})+'</small></td><td><select class="rsel" data-a="urole" data-i="'+esc(u.id)+'" aria-label="role"><option value="user"'+(u.role==="user"?" selected":"")+">"+tr("roleU")+'</option><option value="admin"'+(u.role==="admin"?" selected":"")+">"+tr("roleA")+'</option></select></td><td><button class="x2" data-a="ublk" data-i="'+esc(u.id)+'" data-b="'+(u.blocked?0:1)+'" aria-label="'+tr(u.blocked?"unblk":"blk")+'">'+(u.blocked?"✅":"⛔")+'</button><button class="x2" data-a="udel" data-i="'+esc(u.id)+'" aria-label="'+tr("del")+'">🗑</button></td></tr>';
+    }).join(""):'<tr><td class="ds">'+tr("accEmpty")+"</td></tr>";
+  }).catch(function(){accMsg(tr("accFail"))});
+}
+function adminErr(e){accMsg(e.message==="last_admin"?tr("lastAdm"):tr("accFail"));loadUsers()}
+function adminPatch(id,body){api("/api/admin/users/"+encodeURIComponent(id),{method:"PATCH",body:body}).then(loadUsers).catch(adminErr)}
+function adminDel(id){if(!confirm(tr("aConf")))return;api("/api/admin/users/"+encodeURIComponent(id),{method:"DELETE"}).then(loadUsers).catch(adminErr)}
+document.addEventListener("change",function(ev){var t=ev.target;if(t&&t.dataset&&t.dataset.a==="urole")adminPatch(t.dataset.i,{role:t.value})});
+
+/* ---------- События ---------- */
+function shift(n){
+  var dt=new Date(vy,vm+n,1);vy=dt.getFullYear();vm=dt.getMonth();
+  sel=(vy===now.getFullYear()&&vm===now.getMonth())?TK:K(vy,vm,1);
+}
+document.addEventListener("click",function(ev){
+  var t=ev.target.closest("[data-a]");if(!t)return;
+  var a=t.dataset.a;
+  if(a==="bd"){if(ev.target===t)closeM();return}
+  if(a==="close"){closeM();return}
+  if(a==="how"){openM(t.dataset.e);return}
+  if(a==="acc"){openAcc();return}
+  if(a==="logout"){api("/api/logout",{method:"POST",body:{}}).then(function(){location.href="/"}).catch(function(){location.href="/"});return}
+  if(a==="accdel"){var pw=prompt(tr("aPw"));if(!pw)return;api("/api/me",{method:"DELETE",body:{password:pw}}).then(function(){try{localStorage.clear()}catch(e){}location.href="/"}).catch(function(e){accMsg(e.message==="last_admin"?tr("lastAdm"):tr("accFail"))});return}
+  if(a==="ublk"){adminPatch(t.dataset.i,{blocked:t.dataset.b==="1"});return}
+  if(a==="udel"){adminDel(t.dataset.i);return}
+  if(a==="set"){openSet();return}
+  if(a==="lang"){SET.lang=t.dataset.l;saveSet();applyText();render();openSet(true);return}
+  if(a==="ai"){if(SET.ai&&SET.mode!=="ai"){SET.mode="ai";saveSet();applyPlan();render()}else openAI();return}
+  if(a==="hist"){openDetail(t.dataset.i);return}
+  if(a==="hback"){openSet(true);return}
+  if(a==="hdel"){H=H.filter(function(x){return x.id!==t.dataset.i});saveH();openSet(true);return}
+  if(a==="hclear"){H=[];saveH();openSet(true);return}
+  if(a==="atest"){runTest();return}
+  if(a==="aigo"){runAI();return}
+  if(a==="aiapply"){SET.mode="ai";saveSet();applyPlan();render();closeM();return}
+  if(a==="base"){SET.mode="base";saveSet();applyPlan();render();return}
+  if(a==="mus"){togMus(t.dataset.x);saveSet();applyPlan();render();return}
+  if(a==="prev")shift(-1);
+  else if(a==="next")shift(1);
+  else if(a==="today"){vy=now.getFullYear();vm=now.getMonth();sel=TK}
+  else if(a==="pick"){
+    sel=t.dataset.k;render();
+    if(window.matchMedia&&matchMedia("(max-width:859px)").matches)$("#day").scrollIntoView({behavior:"smooth",block:"start"});
+    return;
+  }else{
+    var q=sel.split("-").map(Number),p=PLAN[dow(q[0],q[1]-1,q[2])],s=st(sel);
+    if(!p.ex)return;
+    if(a==="tog"){var id=t.dataset.e;if(s.d[id]){delete s.d[id];s.f=0}else s.d[id]=1}
+    else if(a==="fin"){p.ex.forEach(function(i){s.d[i]=1});s.f=1}
+    else if(a==="undo"){s.d={};s.f=0}
+    save();
+  }
+  render();
+});
+document.addEventListener("keydown",function(ev){if(ev.key==="Escape"&&!$("#md").hidden)closeM()});
+applyPlan();applyText();render();boot();
+})();
+</script>
+</body>
+</html>
