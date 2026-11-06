@@ -180,8 +180,8 @@ app.post("/api/reset", async (req, res) => {
 
 /* ---------- прогресс пользователя (синхронизация) ---------- */
 app.get("/api/state", auth, (req, res) => {
-  const r = db.prepare("SELECT json FROM states WHERE uid=?").get(req.user.id);
-  res.json({ state: r ? JSON.parse(r.json) : null });
+  const r = db.prepare("SELECT json, upd FROM states WHERE uid=?").get(req.user.id);
+  res.json({ state: r ? JSON.parse(r.json) : null, upd: r ? r.upd : 0 });
 });
 app.put("/api/state", auth, (req, res) => {
   const s = (req.body || {}).state;
