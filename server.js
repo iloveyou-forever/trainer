@@ -12,7 +12,11 @@ const BASE = (E.BASE_URL || "").replace(/\/$/, "");
 const ADMIN_CODE = E.ADMIN_CODE || "";
 const AI_KEY = E.ANTHROPIC_API_KEY || "";
 const AI_MODEL = E.ANTHROPIC_MODEL || "claude-haiku-5-5";
-const AI_LIMIT = +E.AI_DAILY_LIMIT || 5;
+const AI_LIMIT = +E.AI_DAILY_LIMIT || 3;          // анализов по фото в сутки для бесплатных
+const AI_PRO_LIMIT = +E.AI_PRO_LIMIT || 30;      // для Pro
+const NUT_LIMIT = +E.NUTRITION_DAILY_LIMIT || 5; // планов питания в сутки для Pro
+const AI_URL = E.ANTHROPIC_API_URL || "https://api.anthropic.com/v1/messages";
+const BUY_URL = /^https:\/\//.test(E.PRO_BUY_URL || "") ? E.PRO_BUY_URL : "";
 const DAY = 864e5, SESSION_DAYS = 30;
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const PW = /^(?=.*[A-Za-zА-Яа-яЁё])(?=.*\d).{8,128}$/;
@@ -25,14 +29,17 @@ CREATE TABLE IF NOT EXISTS users(id TEXT PRIMARY KEY, name TEXT NOT NULL, email 
 CREATE TABLE IF NOT EXISTS sessions(h TEXT PRIMARY KEY, uid TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, exp INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS resets(h TEXT PRIMARY KEY, uid TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, exp INTEGER NOT NULL);
 CREATE TABLE IF NOT EXISTS states(uid TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, json TEXT NOT NULL, upd INTEGER NOT NULL);
-CREATE TABLE IF NOT EXISTS usage(uid TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, day TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY(uid, day));`);
+CREATE TABLE IF NOT EXISTS usage(uid TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, day TEXT NOT NULL, n INTEGER NOT NULL, PRIMARY KEY(uid, day));
+CREATE TABLE IF NOT EXISTS nutrition(uid TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, json TEXT NOT NULL, upd INTEGER NOT NULL);`);
+try { db.exec("ALTER TABLE users ADD COLUMN pro_until INTEGER NOT NULL DEFAULT 0"); } catch (e) {}
 
 /* ---------- утилиты ---------- */
 const now = () => Date.now();
 const sha = s => crypto.createHash("sha256").update(s).digest("hex");
 const rnd = n => crypto.randomBytes(n).toString("hex");
 const str = (v, n) => (typeof v === "string" ? v.trim().slice(0, n) : "");
-const pub = u => ({ id: u.id, name: u.name, email: u.email, role: u.role });
+const isPro = u => u.role === "admin" || (u.pro_until || 0) > now();
+const pub = u => ({ id: u.id, name: u.name, email: u.email, role: u.role, pro: isPro(u), proUntil: u.pro_until || 0, buyUrl: BUY_URL });
 async function hashPw(pw) { const s = crypto.randomBytes(16); const h = await scrypt(pw, s, 64); return s.toString("hex") + ":" + h.toString("hex"); }
 async function checkPw(pw, st) { const [s, h] = st.split(":"); const x = await scrypt(pw, Buffer.from(s, "hex"), 64); return crypto.timingSafeEqual(x, Buffer.from(h, "hex")); }
 let DUMMY = ""; hashPw("dummy-password-1").then(h => { DUMMY = h; });
@@ -60,7 +67,7 @@ function userFrom(req) {
   const t = cookie(req, "sid"); if (!t) return null;
   const s = db.prepare("SELECT uid, exp FROM sessions WHERE h=?").get(sha(t));
   if (!s || s.exp < now()) return null;
-  const u = db.prepare("SELECT id,name,email,role,blocked FROM users WHERE id=?").get(s.uid);
+  const u = db.prepare("SELECT id,name,email,role,blocked,pro_until FROM users WHERE id=?").get(s.uid);
   return u && !u.blocked ? u : null;
 }
 async function sendMail(to, subject, text) {
@@ -208,11 +215,11 @@ app.post("/api/analyze", auth, async (req, res) => {
   const uid = req.user.id, day = new Date().toISOString().slice(0, 10);
   if (busy.has(uid)) return res.status(429).json({ error: "busy" });
   const used = db.prepare("SELECT n FROM usage WHERE uid=? AND day=?").get(uid, day);
-  if (used && used.n >= AI_LIMIT) return res.status(429).json({ error: "limit" });
+  if (used && used.n >= (isPro(req.user) ? AI_PRO_LIMIT : AI_LIMIT)) return res.status(429).json({ error: "limit" });
   db.prepare("INSERT INTO usage(uid,day,n) VALUES(?,?,1) ON CONFLICT(uid,day) DO UPDATE SET n=n+1").run(uid, day);
   busy.add(uid);
   try {
-    const r = await fetch("https://api.anthropic.com/v1/messages", {
+    const r = await fetch(AI_URL, {
       method: "POST",
       headers: { "content-type": "application/json", "x-api-key": AI_KEY, "anthropic-version": "2023-06-01" },
       body: JSON.stringify({ model: AI_MODEL, max_tokens: 800, messages: [{ role: "user", content: [
@@ -232,9 +239,68 @@ app.post("/api/analyze", auth, async (req, res) => {
   } finally { busy.delete(uid); }
 });
 
+/* ---------- Питание (Pro) ---------- */
+const NUT_PROMPT = (t, o, lang) => `You are a careful sports nutrition assistant. Create a practical meal plan for a healthy adult. The daily targets are already computed, do not change them: ${t.kcal} kcal, protein ${t.p} g, fat ${t.f} g, carbs ${t.c} g. Meals per day: ${o.meals}. Diet: ${o.diet}. Allergies and foods to exclude: ${o.avoid || "none"}. Budget: ${o.budget}. Cuisine or region: ${o.region || "international"}. Use common, affordable foods with amounts in grams or household measures. Each day must be within about 5% of the kcal target. Give 3 example days that can be repeated through the week, a shopping list for 7 days and 4 short tips. Never give medical advice, never suggest fasting, crash diets, laxatives or supplements with dosages, and never include any food from the allergy list. Write all text in ${LANGN[lang] || "English"}. Return ONLY JSON: {"days":[{"title":"...","meals":[{"t":"meal name","d":"what to eat with amounts","kcal":number,"p":number}]}],"shopping":["item with weekly amount"],"tips":["tip"]}`;
+function nutTargets(o) {
+  const bmr = 10 * o.weight + 6.25 * o.height - 5 * o.age + (o.sex === "m" ? 5 : -161);
+  let kcal = bmr * ({ low: 1.35, mid: 1.55, high: 1.75 }[o.activity]) * (o.goal === "lose" ? 0.85 : o.goal === "gain" ? 1.1 : 1);
+  kcal = Math.round(Math.max(kcal, o.sex === "m" ? 1500 : 1200) / 10) * 10;
+  const p = Math.min(220, Math.round(o.weight * (o.goal === "lose" ? 2 : 1.8))), f = Math.round(o.weight * 0.9);
+  return { kcal, p, f, c: Math.max(0, Math.round((kcal - p * 4 - f * 9) / 4)) };
+}
+app.get("/api/nutrition", auth, (req, res) => {
+  const r = db.prepare("SELECT json FROM nutrition WHERE uid=?").get(req.user.id);
+  res.json({ plan: r ? JSON.parse(r.json) : null });
+});
+app.post("/api/nutrition", auth, async (req, res) => {
+  if (!isPro(req.user)) return res.status(402).json({ error: "pro_required" });
+  if (!AI_KEY) return res.status(503).json({ error: "ai_off" });
+  const b = req.body || {}, clean = v => str(v, 120).replace(/[^\p{L}\p{N}\s,.\-]/gu, "");
+  const o = { sex: b.sex, goal: b.goal, activity: b.activity, diet: b.diet, budget: b.budget,
+    age: Math.round(+b.age), height: Math.round(+b.height), weight: Math.round(+b.weight), meals: Math.round(+b.meals),
+    avoid: clean(b.avoid), region: clean(b.region).slice(0, 40) };
+  const ok = (v, a) => a.includes(v);
+  if (!ok(o.sex, ["m", "f"]) || !ok(o.goal, ["lose", "keep", "gain"]) || !ok(o.activity, ["low", "mid", "high"]) ||
+      !ok(o.diet, ["any", "vegetarian", "vegan", "pescatarian"]) || !ok(o.budget, ["low", "mid", "high"]) ||
+      !(o.age >= 18 && o.age <= 80) || !(o.height >= 130 && o.height <= 220) || !(o.weight >= 40 && o.weight <= 250) || !(o.meals >= 3 && o.meals <= 5))
+    return res.status(400).json({ error: "invalid" });
+  const bmi = o.weight / ((o.height / 100) ** 2);
+  if (bmi < 17 || (bmi < 18.5 && o.goal === "lose")) return res.status(400).json({ error: "unsafe" });
+  const uid = req.user.id, key = "n" + new Date().toISOString().slice(0, 10);
+  if (busy.has(uid)) return res.status(429).json({ error: "busy" });
+  const used = db.prepare("SELECT n FROM usage WHERE uid=? AND day=?").get(uid, key);
+  if (used && used.n >= NUT_LIMIT) return res.status(429).json({ error: "limit" });
+  db.prepare("INSERT INTO usage(uid,day,n) VALUES(?,?,1) ON CONFLICT(uid,day) DO UPDATE SET n=n+1").run(uid, key);
+  const t = nutTargets(o);
+  busy.add(uid);
+  try {
+    const r = await fetch(AI_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-api-key": AI_KEY, "anthropic-version": "2023-06-01" },
+      body: JSON.stringify({ model: AI_MODEL, max_tokens: 2500, messages: [{ role: "user", content: NUT_PROMPT(t, o, b.lang) }] }),
+      signal: AbortSignal.timeout(90000)
+    });
+    if (!r.ok) { console.error("AI HTTP", r.status); return res.status(502).json({ error: "ai_failed" }); }
+    const data = await r.json(), text = ((data.content || []).find(c => c.type === "text") || {}).text || "";
+    const i = text.indexOf("{"), k = text.lastIndexOf("}");
+    if (i < 0 || k < i) return res.status(502).json({ error: "ai_failed" });
+    const j = JSON.parse(text.slice(i, k + 1)), s2 = (v, n) => (typeof v === "string" ? v.slice(0, n) : ""), n2 = v => (Number.isFinite(+v) ? Math.max(0, Math.min(5000, Math.round(+v))) : 0);
+    const list = (a, n, m) => (Array.isArray(a) ? a : []).slice(0, n).map(x => s2(x, m)).filter(Boolean);
+    const days = (Array.isArray(j.days) ? j.days : []).slice(0, 3).map(d => ({ title: s2(d && d.title, 40),
+      meals: (Array.isArray(d && d.meals) ? d.meals : []).slice(0, 6).map(m => ({ t: s2(m && m.t, 30), d: s2(m && m.d, 240), kcal: n2(m && m.kcal), p: n2(m && m.p) })) })).filter(d => d.meals.length);
+    if (!days.length) return res.status(502).json({ error: "ai_failed" });
+    const plan = { t, days, shopping: list(j.shopping, 40, 80), tips: list(j.tips, 6, 200), at: now(), goal: o.goal };
+    db.prepare("INSERT INTO nutrition(uid,json,upd) VALUES(?,?,?) ON CONFLICT(uid) DO UPDATE SET json=excluded.json, upd=excluded.upd").run(uid, JSON.stringify(plan), now());
+    res.json({ plan });
+  } catch (e) {
+    console.error("AI error:", e.message);
+    res.status(502).json({ error: "ai_failed" });
+  } finally { busy.delete(uid); }
+});
+
 /* ---------- панель администратора ---------- */
 app.get("/api/admin/users", auth, admin, (req, res) =>
-  res.json(db.prepare("SELECT id,name,email,role,blocked,created,last FROM users ORDER BY created DESC LIMIT 1000").all()));
+  res.json(db.prepare("SELECT id,name,email,role,blocked,created,last,pro_until FROM users ORDER BY created DESC LIMIT 1000").all()));
 
 app.patch("/api/admin/users/:id", auth, admin, (req, res) => {
   const u = db.prepare("SELECT * FROM users WHERE id=?").get(req.params.id);
@@ -250,6 +316,10 @@ app.patch("/api/admin/users/:id", auth, admin, (req, res) => {
   try { db.prepare("UPDATE users SET name=?,email=?,role=?,blocked=? WHERE id=?").run(name, email, role, blocked, u.id); }
   catch (e) { return res.status(409).json({ error: "email_taken" }); }
   if (blocked) db.prepare("DELETE FROM sessions WHERE uid=?").run(u.id);
+  if (b.proDays !== undefined) {
+    const days = Math.max(0, Math.min(3650, Math.floor(+b.proDays) || 0));
+    db.prepare("UPDATE users SET pro_until=? WHERE id=?").run(days === 0 ? 0 : Math.max(now(), u.pro_until || 0) + days * DAY, u.id);
+  }
   res.json({ ok: true });
 });
 
