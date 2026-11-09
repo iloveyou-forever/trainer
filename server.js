@@ -202,9 +202,47 @@ app.put("/api/state", auth, (req, res) => {
 /* ---------- ИИ-анализ (фото не сохраняются нигде) ---------- */
 const LANGN = { ru: "Russian", en: "English", es: "Spanish" };
 const PROMPT = lang => 'You are a supportive strength and conditioning coach. The attached photos (1-3) show an adult who wants a calisthenics plan (pull-up bar, bodyweight, resistance bands). A photo may show the whole body or any single body part (arms, forearms, calves, legs, back, chest, shoulders, abs): use all photos together. Assess ONLY visible muscular development and proportions for training purposes; you may mention other visible muscles (shoulders, abs, quads, glutes) in pros and cons. Be honest but kind and constructive. Never comment on attractiveness, never diagnose, never estimate body-fat percentage, no medical claims. If no body part is clearly visible return {"error":"noperson"}. If the person appears to be under 18 return {"error":"minor"}. If any photo is sexual, explicit or otherwise inappropriate, return {"error":"explicit"} and do not describe it. Rate a muscle ONLY if it is clearly visible in the photos and you can justify the rating from what you actually see; never guess and never infer one muscle from another. Otherwise use null for both the rating and its reason. Do not score or discuss body parts that are not in the photos. Write all text in ' + (LANGN[lang] || "English") + '. Return ONLY JSON: {"score": number 1-10 (overall development for training), "summary": one sentence, "pros": [3 short strings], "cons": [3 short strings, weak points phrased constructively], "why": string (3 short sentences: what is visible, what limits it, what would raise it), "reasons": {"c": short or null, "t": ..., "b": ..., "bi": ..., "k": ..., "f": ...} (max 12 words per rated muscle), "muscles": {"c":1-5 or null,"t":1-5 or null,"b":1-5 or null,"bi":1-5 or null,"k":1-5 or null,"f":1-5 or null}} where c=chest, t=triceps, b=back, bi=biceps, k=calves, f=forearms, 1=weakest and 5=best developed.';
+/* ---------- ИИ: Anthropic (платно) или Cloudflare Workers AI (бесплатный дневной лимит) ---------- */
+const CF_ID = E.CF_ACCOUNT_ID || "", CF_TOKEN = E.CF_API_TOKEN || "";
+const CF_MODEL = E.CF_MODEL || "@cf/meta/llama-4-scout-17b-16e-instruct";
+const CF_BASE = (E.CF_API_BASE || "https://api.cloudflare.com/client/v4").replace(/\/$/, "");
+const PROVIDER = E.AI_PROVIDER || (AI_KEY ? "anthropic" : "cloudflare");
+const aiReady = () => (PROVIDER === "cloudflare" ? !!(CF_ID && CF_TOKEN) : !!AI_KEY);
+const GLOBAL_LIMIT = +E.AI_GLOBAL_DAILY || (PROVIDER === "cloudflare" ? 35 : 0); // общий потолок запросов в сутки
+let gDay = "", gN = 0;
+function globalOk() {
+  const d = new Date().toISOString().slice(0, 10);
+  if (d !== gDay) { gDay = d; gN = 0; }
+  if (GLOBAL_LIMIT && gN >= GLOBAL_LIMIT) return false;
+  gN++; return true;
+}
+async function callAI(prompt, images, maxTokens, timeoutMs) {
+  const signal = AbortSignal.timeout(timeoutMs);
+  if (PROVIDER === "cloudflare") {
+    const r = await fetch(`${CF_BASE}/accounts/${CF_ID}/ai/v1/chat/completions`, {
+      method: "POST", signal,
+      headers: { "content-type": "application/json", authorization: "Bearer " + CF_TOKEN },
+      body: JSON.stringify({ model: CF_MODEL, max_tokens: maxTokens, messages: [{ role: "user", content: images.length
+        ? [...images.map(d => ({ type: "image_url", image_url: { url: d } })), { type: "text", text: prompt }] : prompt }] })
+    });
+    if (!r.ok) throw new Error("AI HTTP " + r.status);
+    const d = await r.json();
+    return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || (d.result && d.result.response) || "";
+  }
+  const r = await fetch(AI_URL, {
+    method: "POST", signal,
+    headers: { "content-type": "application/json", "x-api-key": AI_KEY, "anthropic-version": "2023-06-01" },
+    body: JSON.stringify({ model: AI_MODEL, max_tokens: maxTokens, messages: [{ role: "user", content: [
+      ...images.map(d => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: d.slice(23) } })),
+      { type: "text", text: prompt }] }] })
+  });
+  if (!r.ok) throw new Error("AI HTTP " + r.status);
+  const data = await r.json();
+  return ((data.content || []).find(c => c.type === "text") || {}).text || "";
+}
 const busy = new Set();
 app.post("/api/analyze", auth, async (req, res) => {
-  if (!AI_KEY) return res.status(503).json({ error: "ai_off" });
+  if (!aiReady()) return res.status(503).json({ error: "ai_off" });
   const b = req.body || {}, imgs = b.images;
   if (!Array.isArray(imgs) || imgs.length < 1 || imgs.length > 3) return res.status(400).json({ error: "invalid" });
   for (const d of imgs) {
@@ -216,20 +254,11 @@ app.post("/api/analyze", auth, async (req, res) => {
   if (busy.has(uid)) return res.status(429).json({ error: "busy" });
   const used = db.prepare("SELECT n FROM usage WHERE uid=? AND day=?").get(uid, day);
   if (used && used.n >= (isPro(req.user) ? AI_PRO_LIMIT : AI_LIMIT)) return res.status(429).json({ error: "limit" });
+  if (!globalOk()) return res.status(429).json({ error: "limit" });
   db.prepare("INSERT INTO usage(uid,day,n) VALUES(?,?,1) ON CONFLICT(uid,day) DO UPDATE SET n=n+1").run(uid, day);
   busy.add(uid);
   try {
-    const r = await fetch(AI_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": AI_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: AI_MODEL, max_tokens: 800, messages: [{ role: "user", content: [
-        ...imgs.map(d => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: d.slice(23) } })),
-        { type: "text", text: PROMPT(b.lang) }] }] }),
-      signal: AbortSignal.timeout(60000)
-    });
-    if (!r.ok) { console.error("AI HTTP", r.status); return res.status(502).json({ error: "ai_failed" }); }
-    const data = await r.json();
-    const text = ((data.content || []).find(c => c.type === "text") || {}).text || "";
+    const text = await callAI(PROMPT(b.lang), imgs, 800, 60000);
     const i = text.indexOf("{"), j = text.lastIndexOf("}");
     if (i < 0 || j < i) return res.status(502).json({ error: "ai_failed" });
     res.json(JSON.parse(text.slice(i, j + 1)));
@@ -254,7 +283,7 @@ app.get("/api/nutrition", auth, (req, res) => {
 });
 app.post("/api/nutrition", auth, async (req, res) => {
   if (!isPro(req.user)) return res.status(402).json({ error: "pro_required" });
-  if (!AI_KEY) return res.status(503).json({ error: "ai_off" });
+  if (!aiReady()) return res.status(503).json({ error: "ai_off" });
   const b = req.body || {}, clean = v => str(v, 120).replace(/[^\p{L}\p{N}\s,.\-]/gu, "");
   const o = { sex: b.sex, goal: b.goal, activity: b.activity, diet: b.diet, budget: b.budget,
     age: Math.round(+b.age), height: Math.round(+b.height), weight: Math.round(+b.weight), meals: Math.round(+b.meals),
@@ -270,18 +299,12 @@ app.post("/api/nutrition", auth, async (req, res) => {
   if (busy.has(uid)) return res.status(429).json({ error: "busy" });
   const used = db.prepare("SELECT n FROM usage WHERE uid=? AND day=?").get(uid, key);
   if (used && used.n >= NUT_LIMIT) return res.status(429).json({ error: "limit" });
+  if (!globalOk()) return res.status(429).json({ error: "limit" });
   db.prepare("INSERT INTO usage(uid,day,n) VALUES(?,?,1) ON CONFLICT(uid,day) DO UPDATE SET n=n+1").run(uid, key);
   const t = nutTargets(o);
   busy.add(uid);
   try {
-    const r = await fetch(AI_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json", "x-api-key": AI_KEY, "anthropic-version": "2023-06-01" },
-      body: JSON.stringify({ model: AI_MODEL, max_tokens: 2500, messages: [{ role: "user", content: NUT_PROMPT(t, o, b.lang) }] }),
-      signal: AbortSignal.timeout(90000)
-    });
-    if (!r.ok) { console.error("AI HTTP", r.status); return res.status(502).json({ error: "ai_failed" }); }
-    const data = await r.json(), text = ((data.content || []).find(c => c.type === "text") || {}).text || "";
+    const text = await callAI(NUT_PROMPT(t, o, b.lang), [], 2500, 90000);
     const i = text.indexOf("{"), k = text.lastIndexOf("}");
     if (i < 0 || k < i) return res.status(502).json({ error: "ai_failed" });
     const j = JSON.parse(text.slice(i, k + 1)), s2 = (v, n) => (typeof v === "string" ? v.slice(0, n) : ""), n2 = v => (Number.isFinite(+v) ? Math.max(0, Math.min(5000, Math.round(+v))) : 0);
@@ -338,5 +361,5 @@ app.use((err, req, res, next) => res.status(err.status || 500).json({ error: err
 app.listen(PORT, () => {
   console.log(`Перекладина запущена на порту ${PORT}`);
   if (!adminCount()) console.log(ADMIN_CODE ? "Админа ещё нет: зарегистрируйтесь с кодом администратора (ADMIN_CODE)." : "Админа нет, а ADMIN_CODE не задан: задайте его, чтобы создать администратора.");
-  if (!AI_KEY) console.log("ANTHROPIC_API_KEY не задан: ИИ-анализ по фото отключён.");
+  if (!aiReady()) console.log(PROVIDER === "cloudflare" ? "CF_ACCOUNT_ID / CF_API_TOKEN не заданы: ИИ отключён." : "ANTHROPIC_API_KEY не задан: ИИ отключён.");
 });
