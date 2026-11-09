@@ -225,7 +225,7 @@ async function callAI(prompt, images, maxTokens, timeoutMs) {
       body: JSON.stringify({ model: CF_MODEL, max_tokens: maxTokens, messages: [{ role: "user", content: images.length
         ? [...images.map(d => ({ type: "image_url", image_url: { url: d } })), { type: "text", text: prompt }] : prompt }] })
     });
-    if (!r.ok) throw new Error("AI HTTP " + r.status);
+    if (!r.ok) throw new Error("AI HTTP " + r.status + ": " + (await r.text().catch(() => "")).slice(0, 200));
     const d = await r.json();
     return (d.choices && d.choices[0] && d.choices[0].message && d.choices[0].message.content) || (d.result && d.result.response) || "";
   }
@@ -236,7 +236,7 @@ async function callAI(prompt, images, maxTokens, timeoutMs) {
       ...images.map(d => ({ type: "image", source: { type: "base64", media_type: "image/jpeg", data: d.slice(23) } })),
       { type: "text", text: prompt }] }] })
   });
-  if (!r.ok) throw new Error("AI HTTP " + r.status);
+  if (!r.ok) throw new Error("AI HTTP " + r.status + ": " + (await r.text().catch(() => "")).slice(0, 200));
   const data = await r.json();
   return ((data.content || []).find(c => c.type === "text") || {}).text || "";
 }
@@ -260,11 +260,11 @@ app.post("/api/analyze", auth, async (req, res) => {
   try {
     const text = await callAI(PROMPT(b.lang), imgs, 800, 60000);
     const i = text.indexOf("{"), j = text.lastIndexOf("}");
-    if (i < 0 || j < i) return res.status(502).json({ error: "ai_failed" });
+    if (i < 0 || j < i) { console.error("AI bad output:", text.slice(0, 200)); return res.status(502).json({ error: "ai_failed", detail: req.user.role === "admin" ? "bad output: " + text.slice(0, 150) : undefined }); }
     res.json(JSON.parse(text.slice(i, j + 1)));
   } catch (e) {
     console.error("AI error:", e.message);
-    res.status(502).json({ error: "ai_failed" });
+    res.status(502).json({ error: "ai_failed", detail: req.user.role === "admin" ? String(e.message).slice(0, 300) : undefined });
   } finally { busy.delete(uid); }
 });
 
@@ -306,7 +306,7 @@ app.post("/api/nutrition", auth, async (req, res) => {
   try {
     const text = await callAI(NUT_PROMPT(t, o, b.lang), [], 2500, 90000);
     const i = text.indexOf("{"), k = text.lastIndexOf("}");
-    if (i < 0 || k < i) return res.status(502).json({ error: "ai_failed" });
+    if (i < 0 || k < i) { console.error("AI bad output:", text.slice(0, 200)); return res.status(502).json({ error: "ai_failed", detail: req.user.role === "admin" ? "bad output: " + text.slice(0, 150) : undefined }); }
     const j = JSON.parse(text.slice(i, k + 1)), s2 = (v, n) => (typeof v === "string" ? v.slice(0, n) : ""), n2 = v => (Number.isFinite(+v) ? Math.max(0, Math.min(5000, Math.round(+v))) : 0);
     const list = (a, n, m) => (Array.isArray(a) ? a : []).slice(0, n).map(x => s2(x, m)).filter(Boolean);
     const days = (Array.isArray(j.days) ? j.days : []).slice(0, 3).map(d => ({ title: s2(d && d.title, 40),
@@ -317,7 +317,7 @@ app.post("/api/nutrition", auth, async (req, res) => {
     res.json({ plan });
   } catch (e) {
     console.error("AI error:", e.message);
-    res.status(502).json({ error: "ai_failed" });
+    res.status(502).json({ error: "ai_failed", detail: req.user.role === "admin" ? String(e.message).slice(0, 300) : undefined });
   } finally { busy.delete(uid); }
 });
 
