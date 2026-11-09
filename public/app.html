@@ -475,7 +475,7 @@ async function runAI(){
     var resp=await fetch("/api/analyze",{method:"POST",credentials:"same-origin",headers:{"Content-Type":"application/json"},body:JSON.stringify({images:urls,lang:SET.lang}),signal:aiCtl.signal});
     if(resp.status===401){location.href="/";return}
     var j=await resp.json().catch(function(){return null});
-    if(!resp.ok){aiStatus(resp.status===429?tr("aiRate"):(resp.status===400||resp.status===413)?tr("aiImg"):resp.status===503?tr("aiNo"):tr("aiFail"));return}
+    if(!resp.ok){aiStatus(resp.status===429?tr("aiRate"):(resp.status===400||resp.status===413)?tr("aiImg"):resp.status===503?tr("aiNo"):tr("aiFail")+(j&&j.detail?" ["+j.detail+"]":""));return}
     var r=norm(j);
     if(!r){var er=j&&j.error;aiStatus(er==="minor"?tr("aiMinor"):er==="noperson"?tr("aiNoP"):er==="explicit"?tr("aiExp"):tr("aiFail"))}
     else{
@@ -519,7 +519,7 @@ function api(path,o){
   return fetch(path,o).then(function(r){
     if(r.status===401){location.href="/";throw new Error("auth")}
     return r.json().catch(function(){return {}}).then(function(j){
-      if(!r.ok)throw Object.assign(new Error(j.error||"error"),{status:r.status});
+      if(!r.ok)throw Object.assign(new Error(j.error||"error"),{status:r.status,detail:j.detail});
       return j;
     });
   });
@@ -610,7 +610,7 @@ function nutGo(){
   api("/api/nutrition",{method:"POST",body:o}).then(function(r){
     var el=$("#nres");if(el)el.innerHTML="<h3>"+tr("nLast")+"</h3>"+nutHTML(r.plan);
   }).catch(function(e){
-    var m=$("#nmsg");if(m)m.textContent=e.message==="unsafe"?tr("nUnsafe"):e.message==="invalid"?tr("nBad"):e.status===429?tr("nLimit"):e.status===402?tr("proAsk"):tr("nFail");
+    var m=$("#nmsg");if(m)m.textContent=e.message==="unsafe"?tr("nUnsafe"):e.message==="invalid"?tr("nBad"):e.status===429?tr("nLimit"):e.status===402?tr("proAsk"):tr("nFail")+(e.detail?" ["+e.detail+"]":"");
   }).then(function(){var b2=$("#ngo");if(b2){b2.disabled=false;b2.textContent=tr("nGo")}});
 }
 function openAcc(){
